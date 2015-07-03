@@ -1,0 +1,38 @@
+.TH fimgs 1 "(c) 2007\-2011 Michele Martone"
+.SH NAME
+fimgs \- poor man's [http://]PostScript/pdf/dvi/cbr/rar/cbz/zip viewer for the linux
+framebuffer console
+.SH SYNOPSIS
+.B fimgs [ {fimgs\-options} ] file [\-\- [{fim\-options}]]
+.SH DESCRIPTION
+.B fimgs  
+is a simple wrapper script which takes a PostScript or pdf or .cbr or .rar or .cbz or .zip or .dvi or any of the above prefixed with http:// or https:// or ssh:// as input, renders the pages using ghostscript into a temporary directory and finally calls \fB fim\fP to display them.
+
+In case of compressed archives (in zip or rar formats), the images are decompressed into a directory and displayed using \fB fim\fP.
+In this latter case, only images contained in the archive will be displayed (no nested archives or pdf's or ps's or dvi's).
+
+The temporary directory name is taken from the $TMPDIR environment variable. 
+
+.SH OPTIONS
+To pass through options to \fB fim\fP, you may specify them after "\-\-".
+
+.B \-r {resolution}
+Specify resolution for the 'gs' \-r option (e.g.: 96x96; default 120x120). 
+.TP
+
+.B \-m
+Dump a man page for fimgs.
+.TP
+
+.B \-p {password}
+Specify password for the 'gs' \-p (password) option.
+.TP
+
+.B \-h
+Will display a help message.
+.\" Additionally you can specify \-l, \-xl or \-xxl to get the pages
+.\" rendered with 100, 120 or 150 dpi (default is 75).
+.SH SEE ALSO
+fim(1), fimrc(1), gs(1), fbi(1), fbgs(1), bash(1)
+.SH AUTHOR
+Michele Martone <dezperado _ GUESS _ autistici.org>. 

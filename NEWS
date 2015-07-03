@@ -1,0 +1,174 @@
+	
+	FIM NEWS -- history of (main) user-visible changes in FIM.
+
+                Version 0.5-trunk
+
+ * changed librsb library detection: now it's 
+   LIBS="`librsb-config  --ldflags --extra_libs` " CXXFLAGS="`librsb-config --cflags ` \
+   ./configure --enable-matrices-rendering
+ * scaling image code faster (thanks to __restrict__ pointers)
+ * status bar will not cover image drawing space unless requested (TODO)
+ * customizable SDL window caption line with _want_caption_status (TODO: r648*)
+ * status bar customizable with _display_status_fmt and _info_fmt_str (TODO: r644,r651*)
+ *  "%T" expando to get (and display) total memory used by the program 
+ *  "%C" expando to get (and display) file/memory usage by image cache
+ *  "%M" expando to get (and display) memory used by the current (displayed) image
+ *  "%c" expando to get (and display) centering information
+ *  "%m" expando to get (and display) current image mipmap occupation information
+ * improved the 'align' command (TODO; FIXME)
+ * faster display/scaling of images with mipmaps, set with _use_mipmaps
+ * image cache will remember alignment within viewport (TODO)
+ * viewport info cache size  (TODO)
+ * mouse panning with in SDL mode (TODO: FIXME: disable this)
+ * `make fim' goal eliminated
+ * BMP format support is now optional (TODO: r664*)
+ * PCX format support (TODO: r666*)
+ * jump back and forth from the last viewed image with the ' (single quote aka apostrophe)
+   key and the _lastfileindex variable (r667*)
+ * added --sort and --sort-basename to sort the images list (TODO: r669*)
+ * changed meaning of variable _ignorecase: now it affects autocmd's (TODO: r671*)
+ * introduced variable _re_search_opts affecting regexp-based search (TODO: r671*)
+ * added the 'desc "load"' command to load a textual files comments description file (TODO: 689*,790*)
+ * added --load-image-descriptions-file (equivalent to descload) (TODO: r672*)
+ * added --image-descriptions-file-separator (TODO: r682*)
+ * search (and jump) on image descriptions via 'goto' (TODO: r674*)
+ * EXIF tags will be read with libexif and become i:EXIF_-prefixed variables (TODO: r675*)
+ * stat() checking of files on load can be disabled with _push_checks (TODO: 678)
+ * added --no-stat-push to set _push_checks=0 before initialization (TODO: 679)
+ * added the _comment_over_image variable (TODO: r683)
+ * default key 'r' is bound to 'rotate90', key 'R' to 'rotate270'
+ * can be invoked without stdin; e.g. from an X menu
+ * when repeating search with repeat_last, will use last direction (TODO: 696)
+ * '?' key is now assigned to backward search (goto '-//')
+ * default 'C-p' key is now assigned to repeat last backward search (goto '-//')
+ * added "display 'resize'" to resize the SDL window, eventually to image size
+ * default SDL mode is windowed  (TODO, to document: 698)
+ * default 'C-w' key will resize the SDL window to the original image size (TODO: 698)
+ * default 'W' key will resize the SDL window to the image size (TODO: 698)
+ * added a --autowindow switch to adapt window size to picture size (TODO: 703)
+ * the 'help' command will search in help items if argument starts with /
+ * the 'help' command will search also in fim command options (r791*)
+ * special image variable expandos/specifiers (TODO: (undocumented) r676)
+ * special variable i:* expanding to all the variable name/value pairs of the current image (r724)
+ * opening image files in archives with libarchive (experimental, incomplete; TODO: r665)
+ * (experimental) JPEG-2000 support via JasPer (TODO: r660)
+ * (experimental) exiftool interface (TODO: r654*)
+ * added a ':- INTEGER' syntax, so one can specify the file in the list counting from the end (r744*)
+ * added a _archive_files variable to specify which file names specify archives (r745*)
+ * -R / --recursive switch to turn on recursive push of command line specified directories (r746*)
+ * added a 'list "pushdirr"' command, working like "pushdir" but recursive (r746*)
+ * the _fbfont variable will contain the current console font file string (r767*)
+ * if _want_exif_orientation is set, images will be reoriented according to EXIF
+   metadata (i:__exif_orientation, i:__exif_mirrored, i:__exif_flipped). (r769!,805*)
+ * mirror/flip is now being applied with respect to the viewport borders (r772,r775*)
+ * Pause and Menu keys are now available in -o sdl mode (r776*)
+ * added  list 'marked'  to show the list of marked files (r780*)
+ * key Del bound to pop the current image from the list (r782*)
+ * i:_file loader will store the used loader string (r784*)
+ * --offset accepts a range now (using the new _open_offset_retry variable) (EXPERIMENTAL,r795*)
+ * if an image has been opened with an offset, i:_open_offset will be set accordingly (EXPERIMENTAL,r796*)
+ * i:pagecount is now replaced by i:pages (r806*)
+ * put aside the v: b: and w: namespaces until they make more sense (r807*)
+
+                Version 0.4
+
+ * changed --random semantics and introduced --random-no-seed switch
+ * customizable status bar file info string
+ * introduced --as-text to render printable bytes as text
+ * key r is bound to 'rotate90', key R to 'rotate270'
+ * bug fixes for the g: namespace, SDL/X mode, "list 'pop'" command, 
+   the --offset option, 'ascale' and rotation, documentation.
+
+                Version 0.4-beta
+
+ * interface to the GraphicsMagic library (more graphics formats supported)
+ * introduced bitwise AND and OR operators
+ * support for rendering "matrix market" numerical matrix files (with librsb)
+ * X mode not anymore default in aalib, available at option 
+ * libjpeg usage fixes
+ * libpng usage fixes (support for PNG_LIBPNG_VER>=10209)
+ * documentation improvements (e.g.: fim man page is auto-generated)
+ * "imlib2" X-based output device support 
+ * "sdl" output device improvements (fullscreen/mouse/windowed options, I/O, ..)
+ * more default consolefont options (e.g.: hardcoded consolefonts support)
+ * configure option to disable the fim history file
+ * improvements to scale, goto, other commands
+ * improved directories reading
+ * introduced --no-commandline, --no-internal-config switches
+ * aggregated some commands for clarity
+ * output console can be disabled at configure time
+ * important fbdev bug fixes 
+ * autocompletion of variable identifiers
+
+        	Version 0.3
+
+ * minor strchr compilation problem on some systems
+ * better consolefonts support  
+ * much better SDL support (different color modes)
+ * 'negate' feature
+ * -S, or 'sanity-check' switch 
+
+               Version 0.3-beta-prerelease
+
+ * auto-generated documentation: more consistency 
+ * grammar specification, in man fimrc
+ * internal commands,variables,autocommands  reference man page, in man fimrc
+ * better internal help mechanisms
+ * more control (resolution change,windowed mode) in experimental sdl mode
+ * new commands (pread,reverse,shuffle,...) 
+ * (temporarily) disabled internal windows splitting 
+ * pushing files from a directory
+ * several minor and major bugfixes
+
+        	Version 0.3-beta
+
+ * full         support for AAlib (Ascii Art rendering) (-o aa)
+ * experimental support for SDLlib (Simple Directmedia Layer) (-o sdl) (X!)
+ * experimental PDF, PS, DJVU file support
+ * history file support (~/.fim_history)
+ * seamless caching and prefetching integration
+ * viewing of any type files as bitmaps (unset bits black, set bits white)
+ * viewing of any type files as pixmaps (as RGB triples)
+ * framebuffer driver now can be disabled at compile time
+ * colors inversion: saves a significant fraction of power when viewing documents 
+
+        	Version 0.3-alpha
+
+ * experimental support for AAlib (Ascii Art rendering) (-t)
+ * reading image files (-i) and scripts (-p) from stdin
+ * runs on the powerpc architecure
+ * rewritten from scratch the debug console, now buffered and with scrolling
+ * achieved speedup in magnifying pictures
+ * achieved speedup in displaying dithered images
+ * smarter quoting rules (looser quote checking) when "push"ing files
+ * dumping to file execution logs as executable scripts (-W/--write-scriptout)
+ * implemented regular expressions matching operator (=~)
+ * new default key bindings for split windows control
+ * could be compiled with no readline library (--disable-readline)
+
+        	Version 0.2
+ 
+ * internal windowing (with splitting, resizing, swapping) support
+ * .xcf, .fig, .dia, .svg files now viewable via wrapper calls
+ * introduced interactive command iteration ( in the [n]<command key> form )
+ * fim will try to run under screen and over ssh now
+ * custom framebuffer device, fonts and gamma are supported
+ * enriched compile-time options via the ./configure script
+ * vim-styled variable scoping g:,i:,v:,w: (local variables)
+ * eradicated some bugs
+ * introduced new variables, commands
+
+        	Version 0.2-alpha
+ 
+ * first windowing functionalities
+ * bugs and subtle flaws handling
+ * introduced new variables, commands
+
+            	Version 0.1
+
+ * regular expressions for filtering the viewed image list
+ * vim-like autocommands
+ * command line autocompletion
+ * command line history
+ * completely customizable key bindings
+ * external/internal scriptability

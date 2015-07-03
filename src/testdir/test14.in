@@ -1,0 +1,8 @@
+# this should test fim internals
+stdout "this test will break if user configuration breaks in.";
+stdout "so it is temporary :)";
+autocmd "" "" "";
+_debug_commands=1;
+alias "aalib_fix" ""; # FIXME : autocmd "" "" "" should suffice, but it does not!
+echo "ciao";
+next;
