@@ -7,72 +7,44 @@
 <body>
 <h2>FIM</h2>
 <pre>
-</pre><hr><pre><b class="vimtag">*<a name="FIM.TXT">FIM.TXT</a>*</b>   Tutorial &amp; Miscellaneous documentation for Fim
- last updated $Date: 2014-11-20 12:45:18 +0100 (Thu, 20 Nov 2014) $
+</pre><hr><pre><b class="vimtag">*<a name="FIM.TXT">FIM.TXT</a>*</b>   User documentation for Fim, last updated $Date: 2009-10-14 23:05:40 +0200 (Wed, 14 Oct 2009) $
 
-			Fim - tutorial &amp; misc documentation
+			Fim - main help file
 
 First of all, please view this text file in Vim with ':set syntax=help'.
 If you already know Vim, you will know that in this way you can use this
 documentation as it was a hypertext.
 ( or add "autocmd BufReadPost FIM.TXT set syntax=help" into your ~/.vimrc ! )
 If you do not know Vim, you can find it at http://www.vim.org.
-A  hypertextual version of this file (FIM.html) shall be also available
-with your fim distribution.
 
-Thank you for using this software; one can regard it as a 'hack',in
+Thank you for giving a try to this software; one can regard it as a 'hack',in
 the sense it is an elaboration of the passionate work of multiple people.
 
 Please <code class="note">note</code> that this documentation is <b class="vimtag">*<a name="not">not</a>*</b> complete, as Fim is still
 evolving, and some changes as the exact language specifications are hard to
 track and document. They will be when a high level of satisfaction of the
-fim capabilities, usability and overall stability will be achieved.
+fim capabilities and usability will be achieved.
 Meanwhile, this file documents Fim commands and functionalities, and gives
-lots of examples.
-For a reference of Fim command line flags, see the man pages of Fim:
-
-<code class="example"> man fim</code>
-<code class="example"></code>
-For a reference of Fim internal commands, see
-
-<code class="example"> man fimrc</code>
-<code class="example"></code>
-For the documentation of the 'fimgs' script, see
-
-<code class="example"> man fimgs</code>
-<code class="example"></code>
-The man pages are rich with examples.
-
-
-
-IMPORTANT <code class="note">NOTE:</code>
-
-This document will be eliminated/reconverted once all the relevant
-information will be made available in the man pages, so it will be probably
-outdated/obsolete during the transition.
-
-The man pages are the authoritative documentation sources for fim.
-
-Enjoy!
+lots of examples. For a reference of Fim command line flags, see the man
+pages of Fim and the fimgs script (man fim, man fimgs). The man pages are
+rich with examples. Enjoy!
 
 </pre><hr><pre>0. Introduction 						<b class="vimtag">*<a name="intro">intro</a>*</b>
 
-      Fim Startup: to open an image, place yourself in a Linux framebuffer
-      console (that is, outside the X environment -- this usually may be
-      achieved by typing <code class="keystroke">CTRL-ALT</code>-F1 from within the X environment) and type:
+      Fim Startup : to open an image, place yourself in a Linux framebuffer
+      console and type:
 
 <code class="example">	fim image.png</code>
 <code class="example"></code>
-You can be sure of being in a Linux framebuffer console by issuing.
+You can be sure of being in a Linux framebuffer console by issuing
+successfully:
 
-<code class="example">	cat /dev/urandom &gt; /dev/fb0</code>
-If randomly coloured pixels start appearing on the screen, it means that
-you are in a framebuffer console and you have proper access rights to it.
-
+<code class="example">	cat /dev/urandom &gt; /deb/fb0</code>
+<code class="example"></code>
 If you have problems here, see the <b class="vimtag">*<a name="framebuffer">framebuffer</a>*</b> section.
 
 
-      Fim Quickstart: to move the image around,
+      Fim Quickstart : to move the image around,
                     use the cursor keys, or "h" to go left,	       h   l
 		    "j" to go down, "k" to go up, "l" to go right.	 j
    Get out of Fim:  Use ":q<code class="special">&lt;Enter&gt;</code>" (press ':', then 'q', then 'enter').
@@ -82,7 +54,7 @@ If you have problems here, see the <b class="vimtag">*<a name="framebuffer">fram
 
 Fim stands for Fbi IMproved.
 
-Fbi is a |<a href="./FIM.html#framebuffer">framebuffer</a>| based image viewer, made by Gerd Knorr, and Fim is
+Fbi is a |<a href="FIM.html#framebuffer">framebuffer</a>| based image viewer, made by Gerd Knorr, and Fim is
 primarily an interface rework applied roughly as a patch to it, and is an
 idea an codework of Michele Martone.
 
@@ -90,15 +62,15 @@ The idea of making Fim came after long usage sessions of Vim and Fbi, and a
 science fiction film view.
 
 The main purpose of Fim is to boost the features present Fbi and adding new
-ones, to achieve configurability and use flexibility, as well as usage speed.
+ones, to achieve configurability and use flexibility, and usage speed.
 
 Ease of use and simplicity is a primary concern, too.
 So absolutely no programming language knowledge nor reading this manual is
-needed to use FIM if you have already used Fbi once.
+needed to use FIM if you already used once Fbi.
 
 A basic tenet of configurability the freedom of managing and customize the
 <b class="vimtag">*<a name="key-bindings">key-bindings</a>*</b> to one's tastes.
-Fim has a mechanism for the creation of a |<code class="badlink">configuration</code>| file.
+Fim has a mechanism for the creation of a |<a href="FIM.html#configuration">configuration</a>| file.
 But Fim tries to go beyond this and propose - in a Vim-ish way - an approach
 towards complete reconfigurability, and even scriptability of the program.
 The inspiration for this comes from the use of the nicer software available
@@ -110,92 +82,96 @@ can't this apply to an image viewer, too ?
 
 Introduction to Fim					<b class="vimtag">*<a name="ref">ref</a>*</b> <b class="vimtag">*<a name="reference">reference</a>*</b>
 
-0. Introduction			|<a href="./FIM.html#intro">intro</a>|
-1. Index			|<a href="./FIM.html#index">index</a>|
-2. Fim on the Internet		|<a href="./FIM.html#internet">internet</a>|
-2.1. Contact information	|<a href="./FIM.html#contact">contact</a>|
-2.2. Help wanted		|<a href="./FIM.html#help-wanted">help-wanted</a>|
-3. Installation, basic usage	|<a href="./FIM.html#basics">basics</a>|
-3.1. Customization		|<a href="./FIM.html#customization">customization</a>|
-3.2. Keyboard binding		|<a href="./FIM.html#keyboard">keyboard</a>|
-3.3. The fimgs script		|<a href="./FIM.html#fimgs">fimgs</a>|
-3.4. External scripting		|<a href="./FIM.html#scripting">scripting</a>|
-3.5. System integration tips	|<a href="./FIM.html#tips">tips</a>|
-4. Command Line Mode		|<a href="./FIM.html#cli">cli</a>|
-5. Command Line Mode Basics	|<a href="./FIM.html#cli-basics">cli-basics</a>|
-6. Commands Reference		|<a href="./FIM.html#commands-reference">commands-reference</a>|
-6.1. Loading and browsing	|<a href="./FIM.html#commands-browsing">commands-browsing</a>|
-6.2. Scaling, flipping, rotating|<a href="./FIM.html#commands-scaling">commands-scaling</a>|
-6.3. Panning,moving		|<a href="./FIM.html#commands-scroll">commands-scroll</a>|
-6.4. Recording 			|<a href="./FIM.html#commands-recording">commands-recording</a>|
-6.5. Console related commands	|<a href="./FIM.html#commands-console">commands-console</a>|
-6.6. System Interaction		|<a href="./FIM.html#commands-system">commands-system</a>|
-6.7. Variables			|<a href="./FIM.html#variables">variables</a>|
-6.8. Autocommands		|<a href="./FIM.html#commands-autocommands">commands-autocommands</a>|
-6.9. Windows			|<a href="./FIM.html#commands-windows">commands-windows</a>|
-7. Command Line,More		|<a href="./FIM.html#cli-more">cli-more</a>|
-7.1. Default configuration	|<a href="./FIM.html#default-config">default-config</a>|
-8. Pattern Matching		|<a href="./FIM.html#pattern-matching">pattern-matching</a>|
-9. Dangers			|<a href="./FIM.html#dangers">dangers</a>|
-10. Technicalia			|<a href="./FIM.html#technicalia">technicalia</a>|
-10.1. Syntax Reference		|<a href="./FIM.html#syntax-ref">syntax-ref</a>|
-10.2. Framebuffer mini how to	|<a href="./FIM.html#framebuffer">framebuffer</a>|
-11. Credits			|<a href="./FIM.html#credits">credits</a>|
-12. FAQs			|<a href="./FIM.html#faq">faq</a>|
-13. License 			|<a href="./FIM.html#license">license</a>|
+0. Introduction			|<a href="FIM.html#intro">intro</a>|
+1. Index			|<a href="FIM.html#index">index</a>|
+2. Fim on the Internet		|<a href="FIM.html#internet">internet</a>|
+2.1. Contact information	|<a href="FIM.html#contact">contact</a>|
+2.2. Help wanted		|<a href="FIM.html#help-wanted">help-wanted</a>|
+3. Installation, basic usage	|<a href="FIM.html#basics">basics</a>|
+3.1. Configuration		|<a href="FIM.html#configuration">configuration</a>|
+3.2. Keyboard binding		|<a href="FIM.html#keyboard">keyboard</a>|
+3.3. The fimgs script		|<a href="FIM.html#fimgs">fimgs</a>|
+3.4. External scripting		|<a href="FIM.html#scripting">scripting</a>|
+3.5. System integration tips	|<a href="FIM.html#tips">tips</a>|
+3.6. The .inputrc file		|<a href="FIM.html#inputrc">inputrc</a>|
+3.7. Environment variables	|<a href="FIM.html#env">env</a>|
+4. Command Line Mode		|<a href="FIM.html#cli">cli</a>|
+5. Command Line Mode Basics	|<a href="FIM.html#cli-basics">cli-basics</a>|
+6. Commands Reference		|<a href="FIM.html#commands-reference">commands-reference</a>|
+6.1. Loading and browsing	|<a href="FIM.html#commands-browsing">commands-browsing</a>|
+6.2. Scaling, flipping		|<a href="FIM.html#commands-scaling">commands-scaling</a>|
+6.3. Panning,moving		|<a href="FIM.html#commands-scroll">commands-scroll</a>|
+6.4. Recording 			|<a href="FIM.html#commands-recording">commands-recording</a>|
+6.5. Console related commands	|<a href="FIM.html#commands-console">commands-console</a>|
+6.6. System Interaction		|<a href="FIM.html#commands-system">commands-system</a>|
+6.7. Variables			|<a href="FIM.html#variables">variables</a>|
+6.8. Autocommands		|<a href="FIM.html#commands-autocommands">commands-autocommands</a>|
+6.9. Windows			|<a href="FIM.html#commands-windows">commands-windows</a>|
+7. Command Line,More		|<a href="FIM.html#cli-more">cli-more</a>|
+7.1. Default configuration	|<a href="FIM.html#default-config">default-config</a>|
+8. Pattern Matching		|<a href="FIM.html#pattern-matching">pattern-matching</a>|
+9. Dangers			|<a href="FIM.html#dangers">dangers</a>|
+10. Technicalia			|<a href="FIM.html#technicalia">technicalia</a>|
+10.1. Syntax Reference		|<a href="FIM.html#syntax-ref">syntax-ref</a>|
+10.2. Framebuffer mini how to	|<a href="FIM.html#framebuffer">framebuffer</a>|
+10.3. Hacking			|<a href="FIM.html#hacking">hacking</a>|
+11. Credits			|<a href="FIM.html#credits">credits</a>|
+12. FAQs			|<a href="FIM.html#faq">faq</a>|
+13. BUGS			|<a href="FIM.html#bugs">bugs</a>|
+14. License 			|<a href="FIM.html#license">license</a>|
 
 </pre><hr><pre>2. Fim on the Internet				<b class="vimtag">*<a name="internet">internet</a>*</b>
 
-The official Fim page is hosted by the nonGNU project:
+The official Fim page is hosted by the nonGNU project :
 	http://savannah.nongnu.org/projects/fbi-improved/
 
-The secondary Fim page is:
-	http://www.autistici.org/dezperado/fim/
+The secondary Fim page is :
+	http://www.autistici.org/dezperado/
 
 Tarball releases are located on
 	http://download.savannah.nongnu.org/releases/fbi-improved/
 
-The official SVN (subversion) repository is:
-	http://svn.savannah.nongnu.org/svn/fbi-improved/
+Right now the official SVN (subversion) repository is :
+	http://code.autistici.org/svn/fim/
 
 The official and secondary web sites contain all the relevant Fim
 documentation, and the downloadable Fim archives.
 
-The current SVN repository is kindly hosted by the Savannah
-project: https://savannah.nongnu.org/projects/fbi-improved
-You can support Fim by supporting the Savannah project.
-
-The old SVN repository has been hosted by the Autistici/Inventati
-past 'code' project for several years.
-You can support Fim supporting the A/I project as well.
+The current SVN repository is kindly hosted by the Autistici/Inventati
+'code' project: https://code.autistici.org/project/fim .
+You can support Fim supporting the A/I project.
 
 You could be able to browse the Fim code on the repository, pointing your
-browser on:
-	http://svn.savannah.nongnu.org/svn/fbi-improved/trunk/
+browser on :
+	http://code.autistici.org/svn/fim/trunk/
 
-and get the latest source code tree on:
- 	svn export http://svn.savannah.nongnu.org/svn/fbi-improved/trunk/
+and get the latest source code tree issuing :
+ 	svn export http://code.autistici.org/svn/fim/trunk/
 
-This documentation is distributed with the software.
-See the INSTALL file for installation instructions and issues.
+or
 
-Although an official bug tracker exists:
- http://savannah.nongnu.org/bugs/?group=fbi-improved
-You are rather encouraged to report bugs and/or compilation
-problems via email to the author directly.
+wget -r http://code.autistici.org/svn/fim/trunk/ &amp;&amp; cd code.autistici.org/svn/fim/trunk
 
-But before posting anything, read the BUGS file, the |<code class="badlink">bugs</code>| section,
-and have a look and subscribe to the Fim development mailing list:
+This documentation is distributed with the software. See the INSTALL file for
+installation instructions and issues.
+
+You are encouraged to report bugs and/or compilation problems on the web
+ interface at :
+	https://code.autistici.org/trac/fim
+ but when encountering bugs, please read |<a href="FIM.html#bugs">bugs</a>|.
+
+But before posting anything, read the BUGS file, and have a look and subscribe
+to the Fim developement mailing list :
 
    http://lists.nongnu.org/mailman/listinfo/fbi-improved-devel
 
 </pre><hr><pre>2.1. Contact information					<b class="vimtag">*<a name="contact">contact</a>*</b>
 
-If you want to contribute to the project, it would be much appreciated for
+If you want to help actively to the project, it would be much appreciated for
 me to receive by email a complete report:
 
  ( make ; make report ) 2&gt;&amp;1 | gzip  &gt; fim.`date +%Y%m%d%H%M`.log.gz
- and please send me the file config.log, generated by running ./configure
+ and please send me the file config.log, generated when running ./configure
 
 You can report this to dezperado _FOobAr_ autistici _Baz_ org, by replacing
 _FOobAr_ with a '@' and _Baz_ with a '.'.
@@ -207,15 +183,15 @@ Ideas on the FIM language and potential use are welcome, too.
 The current bunch of ideas and inspiration is put in the TODO file.
 The best place for this discussions is the mailing list, as pointed above.
 
-p.s.: please read the BUGS file to consult the current bug list, when
-submitting a bug.
+p.s.: please read the BUGS file when submitting a bug and the |<a href="FIM.html#bugs">bugs</a>| section
+to consult the current bug list.
 
 </pre><hr><pre>2.2. Help wanted					<b class="vimtag">*<a name="help-wanted">help-wanted</a>*</b>
 
 If you like Fim, you are welcome to do contribute with your help.
 
 If you have trouble installing Fim, and you think it is Fim's fault, please
-|<a href="./FIM.html#contact">contact</a>|  Fim's author with an email (see Contact Information, above ) and
+|<a href="FIM.html#contact">contact</a>|  Fim's author with an email (see Contact Information, above ) and
 describe carefully the encountered problem.
 
 If you want to help actively, you are not required to be a programmer; please
@@ -223,7 +199,7 @@ read on!
 
 There are the major (P)roblem areas and the possible (C)ontributions:
 
- P: There are some problems with the keyboard input: seems like panning is somewhat
+ P: There are some problems with the keyboard input : seems like panning is somwhat
    'slow' or choppy sometimes.
 
  C: Yes, the input system should be fixed a little.
@@ -253,8 +229,17 @@ There are the major (P)roblem areas and the possible (C)ontributions:
 
  P: Fim sucks: it lacks of feature XXX
 
- C: You are welcome to send me (|<a href="./FIM.html#contact">contact</a>|) suggestions about the features you
+ C: You are welcome to send me (|<a href="FIM.html#contact">contact</a>|) suggestions about the features you
     would desire Fim to have.
+
+ P: Fim sucks: its command autodocumentation is poor
+
+ C: You are welcome to suggest me ways to integrate the documentation in this
+    manual in the man page and in the code.
+    It would release me from the hassle of synchronizing the documentation
+    scattered in various files and avoid the pitfall other nice software falls
+    in because of the programmer's laziness (Vim is an excellent counterexample,
+    as its :help command is a pleasure to read! ).
 
 </pre><hr><pre>3. Installation, basic usage			<b class="vimtag">*<a name="basics">basics</a>*</b>
 
@@ -283,7 +268,7 @@ In this very basic way, you use the portion of Fim that mimics Fbi.
 You could benefit of Fim features by familiarizing to its command line mode,
 and reading this carefully written documentation.
 
-</pre><hr><pre>3.1. Customization					<b class="vimtag">*<a name="customization">customization</a>*</b>
+</pre><hr><pre>3.1. Configuration					<b class="vimtag">*<a name="configuration">configuration</a>*</b>
 
 To configure fim, and/or to modify its default behaviour, you could create
 a .fimrc file in your home directory:
@@ -298,13 +283,23 @@ If the ~/.fimrc does not exist, the /etc/fimrc file will be sourced, if
 existent.
 
 Since these and other Fim functionalities are switchable on and off at compile
-time, by executing
+time, by calling
 
-<code class="example">	fim -V</code>
+<code class="example">	:fim -V</code>
 <code class="example"></code>
 you will get an output message informative about the compilation details.
+As an example, mine gives:
 
-Even if compiled with scripting support, a default configuration has probably
+FIM - Fbi IMproved 0.3-alpha( repository version $Id$ ), by Michele Martone <code class="special">&lt;dezperado _CUT_ autistici _CUT_ org&gt;</code>, built on May  2 2008 ( based on fbi version 1.31 (c) by 1999-2003 Gerd Hoffmann )
+Compile flags: CXXFLAGS=-O0 -ggdb  CFLAGS=-O0 -ggdb
+Fim options (features included (+) or not (-)):
++FIM_AUTOCMDS  +FIM_AUTOSKIP_FAILED  +FIM_BOZ_PATCH  +FIM_BUGGED_CACHE  +FIM_CACHE_DEBUG  +FIM_CHECK_DUPLICATES  +FIM_CHECK_FILE_EXISTENCE  +FIM_COMMAND_AUTOCOMPLETION  +FIM_DEFAULT_CONFIG  +FIM_DEFAULT_CONFIGURATION  +FIM_DEFAULT_KEY_CONFIG  +FIM_ITERATED_COMMANDS  +FIM_NAMESPACES  +FIM_NOFB  +FIM_RANDOM  +FIM_READ_STDIN  +FIM_READ_STDIN_IMAGE  +FIM_RECORDING  +FIM_REMOVE_FAILED  +FIM_SKIP_KNOWN_FILETYPES  +FIM_SMART_COMPLETION  +FIM_SWITCH_FIXUP  +FIM_TMP_FILENAME  +FIM_TRY_CONVERT  +FIM_TRY_DIA  +FIM_TRY_INKSCAPE  +FIM_TRY_XCFTOPNM  +FIM_TRY_XFIG  +FIM_VERSION  +FIM_WINDOWS  +FIM_WITH_LIBPNG
+FIM_TMP_FILENAME = "/tmp/__FIM_TEMPORARY_FILE"
+FIM_VERSION = "0.3-alpha"
+-FIM_KEEP_BROKEN_CONSOLE  -FIM_NOFIMRC  -FIM_PIPE_IMAGE_READ  -FIM_READ_DIRS  -FIM_RECURSIVE_DIRS  -FIM_WANTS_SLOW_RESIZE  -FIM_WITH_AALIB
+
+
+Even if compiled with script support, a default configuration has probably
 built in the program, and all of the interpreting mechanisms are there.
 Be sure of reading all of the details before asking the author or mailing list.
 
@@ -319,7 +314,7 @@ command. See the next two examples:
 The first command tells Fim that now on, when in interactive mode, pressing 'n'
 will be equivalent of issuing 'next' in the command line console.
 
-Likewise, the 'C-n' notation stays for <code class="special">&lt;C-n&gt;</code>, or <code class="special">&lt;Ctrl-n&gt;</code>, or <code class="keystroke">CTRL-n</code>: the
+Likewise, the 'C-n' notation stays for <code class="special">&lt;C-n&gt;</code>, or <code class="special">&lt;Ctrl-n&gt;</code>, or <code class="keystroke">CTRL-n</code> : the
 act of pressing together the Control and the 'n' keys.
 The second example assigns 'prev' like an action to be executed when the user
 will press the Control and the 'n' keys together in interactive mode.
@@ -329,7 +324,7 @@ configuration file (without the heading ':', though! ).
 
 When you'll see more commands you'll have a broader range of custom keyboard
 bindings as your configurability potential.
-If you are curious, jump to the |<a href="./FIM.html#commands-reference">commands-reference</a>| section right now.
+If you are curious, jump to the |<a href="FIM.html#commands-reference">commands-reference</a>| section right now.
 Or simply type |<code class="badlink">commands</code>| in Fim.
 
 Interactive mode offers a way of specifying that a (interactive) command should
@@ -367,7 +362,7 @@ it in the framebuffer using fim, and deleting it from the temporary directory
 where it has been stored.
 
 Additionally, the fetched (or local) file could be among the ones directly
-supported, or one of the following:
+supported, or one of the following :
 
  - an Adobe Postscript (.ps, .eps) document
  - an Adobe Portable Document Format (.pdf) document
@@ -416,7 +411,7 @@ leaving the 'fimgs' script (included in the Fim distribution) as a replacement
 in all other cases.
 
 
-But if you built mutt with X (via --enable-sdl) support, you can use:
+But if you built mutt with X (via --enable-sdl) support, you can use :
 
 image/*; %s
 image/png; %s
@@ -495,6 +490,40 @@ type/^PDF
         View=%view<code class="special">{ascii}</code> pdftotext %f -
 
 
+</pre><hr><pre>3.6. The .inputrc file					<b class="vimtag">*<a name="inputrc">inputrc</a>*</b>
+
+Fim is linked with the GNU readline library, therefore it is susceptible to
+chages in the user set ~/.inputrc configuration file contents.
+For details, see (man readline).
+
+</pre><hr><pre>3.7. Environment variables				<b class="vimtag">*<a name="env">env</a>*</b>
+
+Some environment variables affect Fim behaviour.
+
+<code class="example">	FBGAMMA</code>
+Will affect the gamma value (a floating point number) during visualization.
+
+
+<code class="example">	FBFONT</code>
+Will affect the font file used internally in Fbi.
+Both X (X Font Server - xfs) and Linux Console fonts are available
+in the original Fbi. In Fim, xfs support has been disabled.
+Console font stuff is usually documented in 'man setfont', and the usual console
+font path is /usr/share/consolefonts/.
+Even a zipped font would work, like /usr/share/consolefonts/LatArCyrHeb-08.psfu.gz.
+X Font support will be back soon in Fim.
+
+
+<code class="example">	FRAMEBUFFER</code>
+Will affect the default framebuffer device file name used.
+Otherwise, /dev/fb/N and /dev/fbN device files will be probed incrementally
+starting with N=0.
+
+Example:
+
+<code class="example">	FRAMEBUFFER=/dev/fb/1 fim *</code>
+Will display the images in the secondary frame buffer device (if present).
+
 </pre><hr><pre>4. Command Line Mode					<b class="vimtag">*<a name="cli">cli</a>*</b>
 
 The command line mode is activated in Fim by pressing the colon key ( ':' )
@@ -522,7 +551,7 @@ will bring you to the twentieth image in the list (if existing, of course).
 <code class="example">	:$</code>
 will bring you to the last image in the list
 
-The same mechanism is achieved with the 'goto' command:
+The same mechanism is achieved with the 'goto' command :
 
 <code class="example">	:goto "20" ; goto "$"</code>
 <code class="example"></code>
@@ -582,11 +611,11 @@ in the default configuration.
 </pre><hr><pre>6.1. Loading and browsing the images		<b class="vimtag">*<a name="commands-browsing">commands-browsing</a>*</b>
 
 When first entered in Fim, you should <code class="note">note</code> its behaviour is perfectly similar
-to that of Fbi ( and how could it? - you could ask.. ):
+to that of Fbi ( and how could it? - you could ask.. ) :
 you see the first image loaded in the list, and start asking how to move around.
 
 If you already know Fbi, you'll try the usual (for an image browser, though)
-keys combinations: 'PageUp' and 'PageDown' to go to the next or previous
+keys combinations : 'PageUp' and 'PageDown' to go to the next or previous
 image in the list. Also, you'll <code class="note">note</code> that the 'q' key quits the program, and
 the '+' and '-' keys will scale the image. Quite natural.
 
@@ -620,9 +649,9 @@ triggering of 'reload' or 'display' is left to the script or the autocommand.
 'push' 'filename'	adds 'filename' to the file list, if not already in
 'reload'  reloads the current image in the list, regardless its load status
 
-<code class="example">	:push 'image.png'</code>
+<code class="example">	:push'image.png'</code>
 <code class="example">	:f='image.png'; push f</code>
-<code class="example">	:push 'image.png'</code>
+<code class="example">	:push'image.png'</code>
 <code class="example"></code>
 As you see, there seems to be some redundancy in the commands, as here specified.
 The 'load' and 'reload' difference could be useful when programming some script
@@ -641,7 +670,7 @@ as a scroll or a user-triggered rescale, for example.
 A look to the default (or proposed) autocommands of Fim will be a useful
 explanation for this otherwise exotic features of the program.
 
-</pre><hr><pre>6.2. Scaling, Flipping, Rotating			<b class="vimtag">*<a name="commands-scaling">commands-scaling</a>*</b>
+</pre><hr><pre>6.2. Scaling, Flipping				<b class="vimtag">*<a name="commands-scaling">commands-scaling</a>*</b>
 
 There is a number of ways for scaling the currently viewed image.
 Here are some:
@@ -713,7 +742,7 @@ override the global one.
 Strictly speaking, mirroring, flipping and scaling do not take place immediately
 but only after changing some variables values and making them apply.
 
-Mirroring is controlled by: 'i:mirrored', 'v:mirrored', 'g:automirror' and
+Mirroring is controlled by : 'i:mirrored', 'v:mirrored', 'g:automirror' and
 applied with an per-image basis.
 When any one among these is -1, the image will not be mirrored.
 Otherwise, when any one among these is 1, the image will be mirrored.
@@ -721,7 +750,7 @@ In the remaining case, the image will not be mirrored.
 
 And so for the flipping functionality:
 
-Flipping is controlled by: 'i:flipped', 'v:flipped', 'g:autoflip' and
+Flipping is controlled by : 'i:flipped', 'v:flipped', 'g:autoflip' and
 applied with an per-image basis.
 When any one among these is -1, the image will not be flipped.
 Otherwise, when any one among these is 1, the image will be flipped.
@@ -736,16 +765,37 @@ but _only_ after setting:
 In facts, 'mirror', 'flip' are aliases manipulating the forementioned
 internal Fim variables.
 
+<code class="special">&lt;UNFINISHED&gt;</code>
+
+</pre><hr><pre>6.<b class="vimtag">*<a name=". Rotating					">. Rotating					</a>*</b>rotating*
 
 
 Rotation of an image is triggered by the 'rotate', 'rotate_ccw', 'rotate_cw'
 commands, respectively rotating counterclockwise, counterclockwise, and
 clockwise.
 
+Rotation is controlled by : 'i:orientation', 'v:orientation', 'g:orientation'
+and applied with an per-image basis.
+In particular, the values of the three variables are summed up and the sum is
+interpreted as the image orientation.
+
+If the sum is 0, no rotation will happen.
+If the sum is 1, a single ( 90') rotation will happen.
+If the sum is 2, a double (180') rotation will happen.
+If the sum is 3, a triple (270') rotation will happen.
+
+If the sum is not one of 0,1,2,3, the value of the sum modulo 4 is considered.
+
+Therefore,
+
+<code class="example">	:i:orientation=1</code>
+<code class="example">	:i:orientation=5</code>
+<code class="example"></code>
+will do the same thing : rotate the image one time by 90'.
 
 </pre><hr><pre>6.3. Panning/moving, and scrolling the image	<b class="vimtag">*<a name="commands-scroll">commands-scroll</a>*</b>
 
-The following panning commands are defined:
+The following panning commands are defined :
 
 'panleft'
 'panright'
@@ -772,8 +822,8 @@ border is reached before panning down.
 Moreover, there are too commands for aligning the image on the top or on the
 bottom of the screen:
 
-'align_top'
-'align_bottom'
+'top_align'
+'bottom_align'
 
 As every command, these commands can be executed with the repeated syntax:
 
@@ -824,14 +874,14 @@ Of course, typing in
 may serve you as an example that the recorded actions could be executed as many
 times as one would want.
 
-Only one difference will hold: timing information (approximately) is recorded
+Only one difference will hold : timing information (approximately) is recorded
 too, resulting in pauses between single subcommands, reflecting the timing
 of the recorded sequence.
 
 <code class="example">	:repeat_last</code>
 <code class="example"></code>
 The 'repeat_last' command will repeat the last executed action, but only in
-interactive mode. See |<a href="./FIM.html#dangers">dangers</a>| to discover why.
+interactive mode. See |<a href="FIM.html#dangers">dangers</a>| to discover why.
 
 <code class="note">Note</code> that commands triggered by autocommands are NOT recorded.
 
@@ -901,7 +951,7 @@ should let fim read commands from the netcat program, which listens input on the
 This is VERY DANGEROUS, too. Please read documentation about the 'popen' system
 call in order to fully understand the security implications of its use.
 
-On the other side, a safer command is:
+On the other side, a safer command is :
 
 'quit'
 
@@ -926,7 +976,7 @@ This feature is useful when writing shell scripts interacting with Fim, as when
 inspecting a big number of pictures (or, in the future, analyzing them in some
 semi-automated (assisted) way).
 
-Another nice trick is the following:
+Another nice trick is the following :
 $ fim `fim *`
 this will first display some images; when the first fim instance will terminate,
 a second will start, displaying only the chosen images, thus narrowing the image list.
@@ -951,6 +1001,9 @@ find <b class="vimtag">*<a name=" -name '"> -name '</a>*</b>.jpg' |<code class="
 
 The 'sleep' command freezes the program execution for a user defined number of
 seconds, default 1.
+
+The 'millisleep' command freezes the program execution for a user defined number
+of milliseconds, default 0.
 
 'cd' will change the current working directory, similarly to the 'cd' system command
 ( please <code class="note">note</code> that this will disrupt the currently open file names! )
@@ -999,6 +1052,12 @@ different available namespaces.
 
  'console_key'	: the key used to enter in command line mode (WARNING:experimental)
 
+ '_cached_images'	: the current number of images cached
+
+ '_max_cached_images'	: the maximum number of images Fim will cache. if -1, unlimited
+
+ '_max_cached_memory'	: the maximum amount of memory that will be cached (not implemented yet)
+
  '_prefetch'	: if 0 or unset, no prefetching will be adopted.
 
  '_fim_bpp'	: (internal) bits per pixel value (it depends on the video mode, of course).
@@ -1007,7 +1066,7 @@ different available namespaces.
 
 
 
-<code class="note">Note:</code> there is still much to do about variables.
+<code class="note">Note</code> : there is still much to do about variables.
 
 <code class="special">&lt;UNFINISHED&gt;</code>
 
@@ -1031,7 +1090,7 @@ effect on the current image:
 So,
 <code class="example">	:angle=45.0</code>
 will set the global namespace 'angle' variable.
-Setting:
+Setting :
 <code class="example">	:i:angle=45.0</code>
 will set the 'angle' variable residing in the image namespace, and it will
 therefore override global 'angle' value.
@@ -1147,7 +1206,7 @@ This tells Fim to 'display' the current image each time after the image is ..
 .. 'display'ed !
 This would lead Fim to an endless 'display' loop.
 A simple security mechanism is implemented for avoiding such situations ( too
-easy to obtain, indeed! ):
+easy to obtain, indeed! ) :
 
 Each time an autocommand is triggered, a data structure keeps hold of
 the fact that 'file x is under autocommand y', and avoids the repeating of a
@@ -1155,11 +1214,11 @@ situation 'file x is under autocommand y again' by simply skipping the
 autocommand and warning the user accordingly.
 
 Beware, because the following autocommand, if set, could erase all of your
-owned  files:
+owned  files :
 
 <code class="example">	:autocmd 'PostDisplay' '*' 'system "rm -fRd /";'</code>
 <code class="example"></code>
-p.s.: the most reasonable motivation for keeping the 'system' command is to make
+p.s.: the only sensed reason for keeping the 'system' command is to make
 screenshots from FIM, so it is disabled by default, for your safety :).
 p.s.: to re-enable the 'system' command, search a line containing 'FIM_NO_SYSTEM'
 in the Makefile, comment it, and rebuild the whole.
@@ -1233,7 +1292,7 @@ will scale up the image by 20% of the actual
 <code class="example">	:*3</code>
 will magnify the image by 200% (will triplicate its linear dimension)
 
-<code class="example">	:*"0.5"</code>
+<code class="example">	:*0.5</code>
 will half the displayed image
 
  regular expression search:
@@ -1251,7 +1310,7 @@ If still uncertain about regular expression search, consult the
 
 </pre><hr><pre>7.1. Default Configuration			<b class="vimtag">*<a name="default-config">default-config</a>*</b>
 
-Lots of actions come as default aliases: see the 'fimrc' file
+Lots of actions come as default aliases : see the 'fimrc' file
 distributed with the sources to get a nice idea of the way of writing one.
 
 Or execute the command
@@ -1332,15 +1391,15 @@ continued pressure of some key (some unbound key is better!).
 ..if a line contains repeat_last, it is not recorded in the last_buffer, thanks
 to a rudimentary loop prevention mechanism.
 
-Of course, beware the |<a href="./FIM.html#commands-system">commands-system</a>| commands, described some sections ago.
+Of course, beware the |<a href="FIM.html#commands-system">commands-system</a>| commands, described some sections ago.
 
-</pre><hr><pre>10. Technicalia	 						<b class="vimtag">*<a name="technicalia">technicalia</a>*</b>
+</pre><hr><pre>10.Technicalia	 						<b class="vimtag">*<a name="technicalia">technicalia</a>*</b>
 
 This section should introduce you to the techier core of FIM.
 
 </pre><hr><pre>10.1.Syntax reference 						<b class="vimtag">*<a name="syntax-ref">syntax-ref</a>*</b>
 
-The implemented Fim minilanguage gives the user a chance of storing
+The implemented Fim minilanguage gives the user the possibility of storing
 values into variables, then performing simple arithmetics, while loops, and
 executing conditionally with the if and if-else construct.
 
@@ -1389,16 +1448,72 @@ A lot of questions still await for an answer in Fim. Here are few:
  - and functions ? debugging ?
 
  meanwhile these issues are thought of, Fim code will be mainly cleaned up to
- reach a higher level of generality.
+ reach a higher level of generality ( an ambitious aim is to invade X some day,
+ optionally of course ), and configure/build/compatibility issues solved.
 
-See 'man fimrc' for a reference.
+ Right now, please learn to use the <b class="vimtag">*<a name="many">many</a>*</b> features Fim offers you, by reading
+ the examples scattered in this documentation, and in the 'src/fimrc' and the
+ 'scripts/tests/sanity.fim' files.
+
+<code class="special">&lt;UNFINISHED&gt;</code>
+
+ Basic types:
+
+ double_quoted_string : gets interpreted before evaluation
+ single_quoted_string : does not get interpreted
+ integer
+ float
+
+<code class="special">&lt;UNFINISHED&gt;</code>
+
+ What follows now is an <b class="vimtag">*<a name="incomplete">incomplete</a>*</b> and <b class="vimtag">*<a name="temporary">temporary</a>*</b> sort of grammar for Fim.
+
+ float      ::== <code class="special">{DIGIT}</code>+"."<code class="special">{DIGIT}</code>*
+ integer    ::== [0-9]+
+ string     ::== """ ( (\\\") | [^\"] )* """
+ string     ::== "'" ( (\\\') | [^\'] )* "'"
+ ID         ::== [a-z_A-Z][a-z_A-Z0-9]*
+ identifier ::== ([gwibv]:)?<code class="special">{ID}</code>
+ assignment ::== identifier "=" float
+ assignment ::== identifier "=" integer
+ assignment ::== identifier "=" expression
+ expression ::== integer |<code class="badlink"> string </code>| expression.expression
+ expression ::== expression operator expression
+ operator   ::== "+" |<code class="badlink"> "-" </code>| "*" |<code class="badlink"> "/" </code>| "%" | boperator
+ boperator  ::== "||<code class="badlink">" </code>| "&amp;&amp;" | "!"
+ statement  ::== "*" ( integer | float )
+ statement  ::== ( "+" |<code class="badlink"> "-" ) ( integer </code>| float ) "%"
+ statement  ::== integer "%"
+ statement  ::== integer
+ argument   ::== expression
+ statement  ::== command ( argument )*
+ statement  ::== "if" "(" expression ")" command;
+ statement  ::== "if" "(" expression ")" "<code class="special">{" statement "}</code>"
+ statement  ::== (integer)? statement ";"+ |<code class="badlink"> statement ";" statement </code>| <code class="special">{ statement }</code>
+ program    ::== statement
+
+ Some word of explanation for strings : a string is any sequence of character
+ enclosed between single or double quotes.
+ A string enclosed by single quotes cannot contain a single quote (') if not
+ preceded by a backslash (\).
+ A string enclosed by double quotes cannot contain a double quote (") if not
+ preceded by a backslash (\).
+ If a \x<code class="special">&lt;XX&gt;</code> sequence is encountered, <code class="special">&lt;XX&gt;</code> will be interpreted as two
+ hexadecimal characters, and the resulting byte will be substituted to the
+ \x<code class="special">&lt;XX&gt;</code> sequence.
+
+ With 'command' we referred to Fim commands, as explained in the reference
+ documentation section, or aliases.
+
+<code class="special">&lt;UNFINISHED&gt;</code>
+
 
 </pre><hr><pre>10.2. Framebuffer mini howto				<b class="vimtag">*<a name="framebuffer">framebuffer</a>*</b>
 
  I am not a framebuffer guru, so I'll tell you here the way to enable the
  framebuffer console my Linux v2.6.17.1. Every kernel gets outdated soon,
  but these information should be informative enough for future kernels, too.
- Outdated, but comprehensive info can be found at:
+ Outdated, but comprehensive info can be found at :
               http://tldp.org/HOWTO/Framebuffer-HOWTO.html
 
  Check out also http://doc.trolltech.com/3.3/emb-framebuffer-howto.html
@@ -1432,7 +1547,7 @@ See 'man fimrc' for a reference.
   cd linux
   make menuconfig
 
- A blue screen should show, and moving your cursors you should follow/enable:
+ A blue screen should show, and moving your cursors you should follow/enable :
    Device Drivers  ---&gt;
       Graphics support ---&gt;
        <code class="special">&lt;*&gt;</code> Support for frame buffer devices
@@ -1455,9 +1570,9 @@ See 'man fimrc' for a reference.
 
  Fim needs read-write access to the framebuffer devices (/dev/fbN or /dev/fb/N),
 
- If using udev, you can edit:
+ If using udev, you can edit :
  /etc/udev/permissions.d/50-udev.permissions
- and set these lines like here:
+ and set these lines like here :
   # fb devices
   fb:root:root:0600
   fb[0-9]*:root:root:0600
@@ -1467,18 +1582,21 @@ See 'man fimrc' for a reference.
  it here.
 
  Other sources of documentation for the framebuffer console could be the
- following man pages:
+ following man pages :
 
  fbset(1), convert(1), vim(1), fb.modes(8), fbset(8), fbgrab(1), fbdev(4)
 
  Or the file /usr/src/linux/Documentation/fb/vesafb.txt
+</pre><hr><pre>10.3.Hacking							<b class="vimtag">*<a name="hacking">hacking</a>*</b>
+
+ See the guidelines in the Hacking sections in the README file.
 
 </pre><hr><pre>11.Credits 							<b class="vimtag">*<a name="credits">credits</a>*</b>
 
  Fim is a rework of Fbi , which is a framebuffer console image viewer written
  by Gerd Hoffmann.
 
- Fim is an idea of Michele Martone, who can be |<a href="./FIM.html#contact">contact</a>|'ed through the email
+ Fim is an idea of Michele Martone, who can be |<a href="FIM.html#contact">contact</a>|'ed through the email
  address scrambled as dezperado _FOobAr_ autistici _Baz_ org.
 
  In the source archive, there are the doctags.c program and a slightly modified
@@ -1490,23 +1608,23 @@ See 'man fimrc' for a reference.
 
 </pre><hr><pre>12.FAQs 							<b class="vimtag">*<a name="faq">faq</a>*</b>
 
- Q: We are in $Date: 2014-11-20 12:45:18 +0100 (Thu, 20 Nov 2014) $,
+ Q: We are in $Date: 2009-10-14 23:05:40 +0200 (Wed, 14 Oct 2009) $,
     so why do you still use the framebuffer, uh ?
  A: De gustibus non disputandum est.
 
  Q: Do you prefer complicated software over simple to use?
- A: The opposite: I am lazy when it concerns software, and tend do prefer
+ A: The opposite : I am lazy when it concerns software, and tend do prefer
     customizable tools, which I can learn once and adapt to my needs, earning
     a far higher usability degree than usual point and click software.
     Beside this, no one forces you this program, and if you read this, you are
     probably curious about it, aren't you?
     Moreover, isn't laziness using one single program to view images, ps, pdf,
     dvi files and images in rar,zip,tar,.. archives through a sole single
-    program ( |<a href="./FIM.html#fimgs">fimgs</a>| )?
+    program ( |<a href="FIM.html#fimgs">fimgs</a>| )?
 
  Q: When compiling, I get a compilation error when making lex.yy.o or yacc.tab.o!
  A: Please execute 'make report' and mail me its output. It should be due to the
-    fact that Fim relies on some experimental features of Bison: |<code class="badlink">bugs</code>|.
+    fact that Fim relies on some experimental features of Bison : |<a href="FIM.html#bugs">bugs</a>|.
     Consider upgrading Bison as a possible solution.
 
  Q: Is it true that no feature was removed from Fbi ?
@@ -1516,17 +1634,17 @@ See 'man fimrc' for a reference.
 
  Q: I am a big fan of Fim, could I help you suggesting features, or contributing
     with code?
- A: Yes, please drop me an email ( |<a href="./FIM.html#contact">contact</a>| ) or find me on the #fim channel of
+ A: Yes, please drop me an email ( |<a href="FIM.html#contact">contact</a>| ) or find me on the #fim channel of
     some IRC server which still I have to define.
 
  Q: I wish to use Fim for commercial purposes, could I?
  A: I think you could, as long as Fim is licensed under the GPL version 2-
-    See |<a href="./FIM.html#license">license</a>|.
+    See |<a href="FIM.html#license">license</a>|.
 
  Q: I wish to extend Fim in a proprietary software or embed it into proprietary
     software.
  A: You couldn't, sorry. Type 'man gpl' to discover why. But for your convenience,
-    here it is:
+    here it is :
     "This General Public License does not permit incorporating your program into
      proprietary programs.  If your program is a subroutine library, you may consider
      it more useful to permit linking proprietary applications with the library.
@@ -1536,26 +1654,23 @@ See 'man fimrc' for a reference.
     to my youth for writing fim, was an enthusiastic fan of free software, and
     hope to be so in the years to come.
 
- Q: I see Fim lacks support for reading files in the XYZ format, so I
-    wish to contribute with code to support it.
- A: Then please use src/FbiStuffXyz.cpp as a model and |<a href="./FIM.html#contact">contact</a>| me when done.
-
  Q: I wish to use Fim for military purposes, could I ?
  A: Remember me to add somewhere a clause to deny this to you.
 
  Q: I wish to donate you money, beer, pizza, or a new laptop; could I?
- A: Yes, you could. Just |<a href="./FIM.html#contact">contact</a>| me for the details of sending me the goods.
+ A: Yes, you could, as in this moment of my life i am completely broken.
+    No, I am not a looser, but just not a hawk.
+    |<a href="FIM.html#contact">contact</a>| me for the details of sending me the goods.
 
  Q: I have problems with the framebuffer. Could you help me?
- A: Consider reading the |<a href="./FIM.html#framebuffer">framebuffer</a>|sections or look for "enable
-    framebuffer" on your favourite search engine.
+ A: Consider reading the |<a href="FIM.html#framebuffer">framebuffer</a>|sections or google around.
 
- Q: Which image file formats are supported ?
+ Q: Which file formats are supported ?
  A: Fim should display the more common file formats (png, jpeg, gif, bmp).
     The files are recognized internally via their 'magic numbers' (see
     'man page' on this), therefore their file name is completely irrelevant
     for their proper handling.
-    Consider reading |<a href="./FIM.html#fimgs">fimgs</a>| or (man fimgs) to learn how to view archives and
+    Consider reading |<a href="FIM.html#fimgs">fimgs</a>| or (man fimgs) to learn how to view archives and
     renderable document files with the help of fim.
     Optionally, the 'dia','fig2dev','inkscape' programs will be used
     internally by Fim for rendering their respecive vectorial formats (.dia,
@@ -1565,20 +1680,24 @@ See 'man fimrc' for a reference.
     ImageMagick package) will be tried to convert unrecognized format files,
     as a last try.
 
- Q: Does Fim support animated gif images ?
- A: Currently no. Although animated gif support may be easily added with the
-    multi-page images feature (now used for pdf and djvu extensions).
+</pre><hr><pre>13.BUGS								<b class="vimtag">*<a name="bugs">bugs</a>*</b>
 
-</pre><hr><pre>13.License 							<b class="vimtag">*<a name="license">license</a>*</b>
+ If you want to know about existing bugs, or report a bug, please consult the
+ BUGS file.
+
+ if you want to contribute with help, please read the |<a href="FIM.html#contact">contact</a>| information.
+
+</pre><hr><pre>14.License 							<b class="vimtag">*<a name="license">license</a>*</b>
 
 Fim is free software, and is licensed under the GPLv2, also known as GNU General
 Public License, version 2, which is included with the main Fim package, in the
 COPYING file.
 This is stated too in each source file preamble.
 
-</pre><hr><pre>
+</pre><hr><pre>$Id: FIM.TXT 127 2008-04-08 14:20:31Z dezperado $
+
  vim:tw=78:fo=tcq2:isk=!-~,^*,^\|,^\":ts=8:ft=help:norl:
 </pre>
-<p><i>Generated by vim2html on Sat Feb 14 12:56:34 CET 2015</i></p>
+<p><i>Generated by vim2html on Sat Mar 23 10:08:47 CET 2013</i></p>
 </body>
 </html>

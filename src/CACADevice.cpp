@@ -1,8 +1,8 @@
-/* $LastChangedDate: 2015-01-17 12:27:33 +0100 (Sat, 17 Jan 2015) $ */
+/* $Id: CACADevice.cpp 162 2008-10-18 13:36:08Z dezperado $ */
 /*
  CACADevice.cpp : cacalib device Fim driver file
 
- (c) 2008-2013 Michele Martone
+ (c) 2008 Michele Martone
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -133,7 +133,7 @@
     		
 		int mirror=flags&FIM_FLAG_MIRROR, flip=flags&FIM_FLAG_FLIP;//STILL UNUSED : FIXME
 
-		if ( !src ) return FIM_ERR_GENERIC;
+		if ( !src ) return -1;
 	
 		if( iroff <0 ) return -3;
 		if( icoff <0 ) return -4;
@@ -201,7 +201,7 @@
 
 			if(mirror)ij    = (loc-oj) + idc;
 			else      ij    = oj + idc;
-			if(ij<0)return FIM_ERR_GENERIC;*/
+			if(ij<0)return -1;*/
 
 			ii    = oi + idr;
 			ij    = oj + idc;
@@ -227,17 +227,17 @@
 //#define width() aa_scrwidth(ascii_context)
 //#define height() aa_scrheight(ascii_context)
 
-	fim_err_t CACADevice::display(
+	int  CACADevice::display(
 		//struct ida_image *img, // source image structure
 		void *ida_image_img, // source image structure
 		//void* rgb,// source rgb array
-		fim_coo_t iroff,fim_coo_t icoff, // row and column offset of the first input pixel
-		fim_coo_t irows,fim_coo_t icols,// rows and columns in the input image
-		fim_coo_t icskip,	// input columns to skip for each line
-		fim_coo_t oroff,fim_coo_t ocoff,// row and column offset of the first output pixel
-		fim_coo_t orows,fim_coo_t ocols,// rows and columns to draw in output buffer
-		fim_coo_t ocskip,// output columns to skip for each line
-		fim_flags_t flags// some flags
+		int iroff,int icoff, // row and column offset of the first input pixel
+		int irows,int icols,// rows and columns in the input image
+		int icskip,	// input columns to skip for each line
+		int oroff,int ocoff,// row and column offset of the first output pixel
+		int orows,int ocols,// rows and columns to draw in output buffer
+		int ocskip,// output columns to skip for each line
+		int flags// some flags
 	)
 	{
 		/*
@@ -249,7 +249,7 @@
 		 * */
 		int i;
 		void* rgb = ida_image_img?((struct ida_image*)ida_image_img)->data:NULL;// source rgb array
-		if ( !rgb ) return FIM_ERR_GENERIC;
+		if ( !rgb ) return -1;
 	
 		if( iroff <0 ) return -2;
 		if( icoff <0 ) return -3;
@@ -291,19 +291,18 @@
 		caca_clear();
 		caca_refresh();
 
-		caca_draw_bitmap(0, 0, caca_get_width() - 1, caca_get_height() - 1, caca_bitmap, bitmap);
-		caca_draw_bitmap(0, 0, caca_get_width() - 1, caca_get_height() - 1, caca_bitmap, rgb);
-		caca_putstr(0,0,"Unfinished display interface!");
-		caca_printf(0,txt_height()-1,"%s","sample caca msg");
-		caca_refresh();
+		caca_printf(0,0,"foooooooo");
+		caca_putstr(0,0,"foooooooo");
+
+		//caca_draw_bitmap(0, 0, caca_get_width() - 1, caca_get_height() - 1,caca_bitmap, bitmap);
 
 		ocskip = width();// output columns to skip for each line
 		ocskip = width();// output columns to skip for each line
 
-		return FIM_ERR_NO_ERROR;
+		return 0;
 	}
 
-	fim_err_t CACADevice::initialize(sym_keys_t &sym_keys)
+	int CACADevice::initialize(key_bindings_t &key_bindings)
 	{
 		int rc=0;
 
@@ -314,21 +313,20 @@
 		YSIZ = caca_get_height() * 2 - 4;
 
 		caca_bitmap = caca_create_bitmap(8, XSIZ, YSIZ - 2, XSIZ, 0, 0, 0, 0);
-		if( !caca_bitmap ) return FIM_ERR_GENERIC;
+		if( !caca_bitmap ) return -1;
 		caca_set_bitmap_palette(caca_bitmap, r, g, b, a);
 		bitmap = (char*)malloc(4 * caca_get_width() * caca_get_height() * sizeof(char));
-		if(!bitmap) return FIM_ERR_GENERIC;
-		fim_bzero(bitmap, 4 * caca_get_width() * caca_get_height());
+		if(!bitmap) return -1;
+		memset(bitmap, 0, 4 * caca_get_width() * caca_get_height());
 
 		caca_clear();
 		caca_set_color(CACA_COLOR_BLACK,CACA_COLOR_WHITE);
 		caca_set_color(CACA_COLOR_RED,CACA_COLOR_BLACK);
-		caca_putstr(0,0,"What a caca!");
 		caca_refresh();
-		return rc?FIM_ERR_GENERIC:FIM_ERR_NO_ERROR;
+		return rc;
 	}
 
-	void CACADevice::finalize(void)
+	void CACADevice::finalize()
 	{
 		caca_end();
 	}
@@ -338,34 +336,16 @@
 	int CACADevice::txt_height(){ return width() ;}
 	int CACADevice::width() { return caca_get_height();}
 	int CACADevice::height(){ return caca_get_width() ;}
-	fim_err_t CACADevice::status_line(const fim_char_t *msg)
+	int CACADevice::status_line(unsigned char *msg)
 	{
 		caca_printf(0,txt_height()-1,"%s",msg);
 		caca_printf(0,0,"foooooooo");
 		caca_putstr(0,0,"foooooooo");
-		return FIM_ERR_NO_ERROR;
+		return 0;
 	}
-	fim_err_t CACADevice::fs_puts(struct fs_font *f, fim_coo_t x, fim_coo_t y, const fim_char_t *str){return FIM_ERR_NO_ERROR;}
-	fim_err_t CACADevice::clear_rect(fim_coo_t x1, fim_coo_t x2, fim_coo_t y1,fim_coo_t y2)
-	{
-		/* FIXME : only if initialized !*/
-		return FIM_ERR_GENERIC;
-	}
-	fim_bool_t CACADevice::handle_console_switch(){return true;}
-	fim_err_t CACADevice::console_control(fim_cc_t code){return FIM_ERR_GENERIC;}
+
 /*
  * This is embryo code and should be used for experimental purposes only!
  */
-	int CACADevice::get_chars_per_column(){return height();}
-	fim_coo_t CACADevice::status_line_height(void)const
-	{
-		return 1;
-	}
-	fim_sys_int CACADevice::get_input(fim_key_t * c, bool want_poll)
-	{
-		/* FIXME: better make this virtual pure before writing the next Device ..  */
-		int ce = caca_wait_event(CACA_EVENT_KEY_PRESS);
-		//caca_get_event(...);
-		return ce;
-	}
-#endif /* FIM_WITH_CACALIB */
+
+#endif

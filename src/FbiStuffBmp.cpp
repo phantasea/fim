@@ -1,8 +1,8 @@
-/* $LastChangedDate: 2014-11-30 11:29:26 +0100 (Sun, 30 Nov 2014) $ */
+/* $Id: FbiStuffBmp.cpp 271 2009-12-13 00:03:48Z dezperado $ */
 /*
  FbiStuffBmp.cpp : fbi functions for BMP files, modified for fim
 
- (c) 2008-2014 Michele Martone
+ (c) 2008-2009 Michele Martone
  (c) 1998-2006 Gerd Knorr <kraxel@bytesex.org>
 
     This program is free software; you can redistribute it and/or modify
@@ -25,7 +25,6 @@
 
 #include "fim.h"
 
-#if FIM_WITH_BMP
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -33,7 +32,7 @@
 #include <errno.h>
 #ifdef HAVE_ENDIAN_H
 # include <endian.h>
-#endif /* HAVE_ENDIAN_H */
+#endif
 
 //#include "loader.h"
 
@@ -57,9 +56,9 @@ typedef unsigned short uint16;
                          ((x>>8)  & 0x0000ff00) |\
                          ((x<<8)  & 0x00ff0000) |\
                          ((x<<24) & 0xff000000))
-#else /* BYTE_ORDER == LITTLE_ENDIAN */
+#else
 # error "Oops: unknown byte order"
-#endif /* BYTE_ORDER == LITTLE_ENDIAN */
+#endif
 
 /* ---------------------------------------------------------------------- */
 /* load                                                                   */
@@ -72,7 +71,7 @@ struct bmp_hdr {
     uint32 height;
     uint16 planes;
     uint16 bit_cnt;
-    fim_char_t   compression[4];
+    char   compression[4];
     uint32 image_size;
     uint32 xpels_meter;
     uint32 ypels_meter;
@@ -82,10 +81,10 @@ struct bmp_hdr {
 };
 
 struct bmp_cmap {
-    fim_byte_t blue;
-    fim_byte_t green;
-    fim_byte_t red;
-    fim_byte_t unused;
+    unsigned char blue;
+    unsigned char green;
+    unsigned char red;
+    unsigned char unused;
 };
 
 struct bmp_state {
@@ -95,19 +94,19 @@ struct bmp_state {
 };
 
 static void*
-bmp_init(FILE *fp, const fim_char_t *filename, unsigned int page,
+bmp_init(FILE *fp, char *filename, unsigned int page,
 	 struct ida_image_info *i, int thumbnail)
 {
     struct bmp_state *h;
     int fr;
 
-    h = (struct bmp_state *)fim_calloc(1,sizeof(*h));
+    h = (struct bmp_state *)fim_calloc(sizeof(*h),1);
     if(!h)goto oops;
-
+    memset(h,0,sizeof(*h));
     h->fp = fp;
 
-    fim_fseek(fp,10,SEEK_SET);
-    fr=fim_fread(&h->hdr,sizeof(struct bmp_hdr),1,fp);
+    fseek(fp,10,SEEK_SET);
+    fr=fread(&h->hdr,sizeof(struct bmp_hdr),1,fp);
     if(!fr)goto oops;
 
 #if BYTE_ORDER == BIG_ENDIAN
@@ -124,7 +123,7 @@ bmp_init(FILE *fp, const fim_char_t *filename, unsigned int page,
     h->hdr.ypels_meter = le32_to_cpu(h->hdr.ypels_meter);
     h->hdr.num_colors  = le32_to_cpu(h->hdr.num_colors);
     h->hdr.imp_colors  = le32_to_cpu(h->hdr.imp_colors);
-#endif /* BYTE_ORDER == BIG_ENDIAN */
+#endif
 
     if (FbiStuff::fim_filereading_debug())
 	FIM_FBI_PRINTF("bmp: hdr=%d size=%dx%d planes=%d"
@@ -157,8 +156,8 @@ bmp_init(FILE *fp, const fim_char_t *filename, unsigned int page,
     if (h->hdr.num_colors > 256)
 	h->hdr.num_colors = 256;
     if (h->hdr.num_colors) {
-	fim_fseek(fp,14+h->hdr.size,SEEK_SET);
-	fr=fim_fread(&h->cmap,sizeof(struct bmp_cmap),h->hdr.num_colors,fp);
+	fseek(fp,14+h->hdr.size,SEEK_SET);
+	fr=fread(&h->cmap,sizeof(struct bmp_cmap),h->hdr.num_colors,fp);
         if(!fr)goto oops;
     }
     
@@ -175,20 +174,20 @@ bmp_init(FILE *fp, const fim_char_t *filename, unsigned int page,
 }
 
 static void
-bmp_read(fim_byte_t *dst, unsigned int line, void *data)
+bmp_read(unsigned char *dst, unsigned int line, void *data)
 {
     struct bmp_state *h = (struct bmp_state *) data;
     unsigned int ll,y,x,pixel,byte = 0;
     
     ll = (((h->hdr.width * h->hdr.bit_cnt + 31) & ~0x1f) >> 3);
     y  = h->hdr.height - line - 1;
-    fim_fseek(h->fp,h->hdr.foobar + y * ll,SEEK_SET);
+    fseek(h->fp,h->hdr.foobar + y * ll,SEEK_SET);
 
     switch (h->hdr.bit_cnt) {
     case 1:
 	for (x = 0; x < h->hdr.width; x++) {
 	    if (0 == (x & 0x07))
-		byte = fim_fgetc(h->fp);
+		byte = fgetc(h->fp);
 	    pixel = byte & (0x80 >> (x & 0x07)) ? 1 : 0;
 	    *(dst++) = h->cmap[pixel].red;
 	    *(dst++) = h->cmap[pixel].green;
@@ -200,7 +199,7 @@ bmp_read(fim_byte_t *dst, unsigned int line, void *data)
 	    if (x & 1) {
 		pixel = byte & 0xf;
 	    } else {
-		byte = fim_fgetc(h->fp);
+		byte = fgetc(h->fp);
 		pixel = byte >> 4;
 	    }
 	    *(dst++) = h->cmap[pixel].red;
@@ -210,7 +209,7 @@ bmp_read(fim_byte_t *dst, unsigned int line, void *data)
 	break;
     case 8:
 	for (x = 0; x < h->hdr.width; x++) {
-	    pixel = fim_fgetc(h->fp);
+	    pixel = fgetc(h->fp);
 	    *(dst++) = h->cmap[pixel].red;
 	    *(dst++) = h->cmap[pixel].green;
 	    *(dst++) = h->cmap[pixel].blue;
@@ -218,14 +217,14 @@ bmp_read(fim_byte_t *dst, unsigned int line, void *data)
 	break;
     case 24:
 	for (x = 0; x < h->hdr.width; x++) {
-	    dst[2] = fim_fgetc(h->fp);
-	    dst[1] = fim_fgetc(h->fp);
-	    dst[0] = fim_fgetc(h->fp);
+	    dst[2] = fgetc(h->fp);
+	    dst[1] = fgetc(h->fp);
+	    dst[0] = fgetc(h->fp);
 	    dst += 3;
 	}
 	break;
     default:
-	fim_memset(dst,128,h->hdr.width*3);
+	memset(dst,128,h->hdr.width*3);
 	break;
     }
 }
@@ -235,7 +234,7 @@ bmp_done(void *data)
 {
     struct bmp_state *h = (struct bmp_state *) data;
 
-    fim_fclose(h->fp);
+    fclose(h->fp);
     fim_free(h);
 }
 
@@ -251,10 +250,9 @@ static struct ida_loader bmp_loader = {
 
 static void __init init_rd(void)
 {
-    fim_load_register(&bmp_loader);
+    load_register(&bmp_loader);
 }
 
 
 }
-#endif /* FIM_WITH_BMP */
 

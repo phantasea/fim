@@ -1,8 +1,8 @@
-/* $LastChangedDate: 2015-02-11 18:05:53 +0100 (Wed, 11 Feb 2015) $ */
+/* $Id: FbiStuff.cpp 271 2009-12-13 00:03:48Z dezperado $ */
 /*
  FbiStuff.cpp : Misc fbi functions, modified for fim
 
- (c) 2008-2015 Michele Martone
+ (c) 2008-2009 Michele Martone
  (c) 1998-2006 Gerd Knorr <kraxel@bytesex.org>
 
     This program is free software; you can redistribute it and/or modify
@@ -25,7 +25,6 @@
 
 
 #include "fim.h"
-#include "fim_plugin.h"
 #include "common.h"
 
 #include <stdio.h>	/* fdopen, tmpfile */
@@ -34,29 +33,6 @@
 #include <math.h>
 #include <string.h>
 #include <stdarg.h>	/* va_start, va_end, ... */
-#if FIM_WITH_ARCHIVE
-#include <archive.h>
-#include <archive_entry.h>
-//extern "C" { const char * archive_entry_pathname(struct archive_entry *); }
-#endif /* FIM_WITH_ARCHIVE */
-
-#define FIM_HAVE_FULL_PROBING_LOADER 0
-#ifdef HAVE_FMEMOPEN
-//#define FIM_SHALL_BUFFER_STDIN (HAVE_FMEMOPEN && FIM_READ_STDIN_IMAGE)	/* FIXME: new */
-#define FIM_SHALL_BUFFER_STDIN 0 /* FIXME: before activating this, we shall harmonize other buffering methods first (e.g.: cc.fpush(), which is backed up by a temporary file) */
-#else /* HAVE_FMEMOPEN */
-#define FIM_SHALL_BUFFER_STDIN 0
-#endif /* HAVE_FMEMOPEN */
-
-#define FIM_WANTS_SLOW_RESIZE 1
-#define FIM_WVMM 0 /* want verbose mip maps (for FIM_WANT_EXPERIMENTAL_MIPMAPS) */
-
-#define FIM_FBISTUFF_INSPECT 0
-#if FIM_FBISTUFF_INSPECT
-#define FIM_PR(X) printf("FBISTUFF:%c:%20s\n",X,__func__);
-#else /* FIM_FBISTUFF_INSPECT */
-#define FIM_PR(X) 
-#endif /* FIM_FBISTUFF_INSPECT */
 
 namespace fim
 {
@@ -64,107 +40,15 @@ namespace fim
 extern CommandConsole cc;
 
 
-/* ----------------------------------------------------------------------- */
-#if FIM_WANT_EXPERIMENTAL_MIPMAPS
-static fim_err_t mipmap_compute(const fim_coo_t w, const fim_coo_t h, const int hw, const int hh, const fim_byte_t *FIM_RSTRCT src, fim_byte_t * FIM_RSTRCT dst)
-{
-	fim_err_t errval = FIM_ERR_GENERIC;
-	/* we compute a quarter of an image, half-sided */
-
-	if(hw<1||hh<1)
-	{
-		goto err;
-	}
-#if 0
-	/* 'internal' version, unfinished */
-	for(int r=0;r<hh;++r)
-	for(int c=0;c<hw;++c)
-	for(int k=0;k<3;++k)
-	{
-		dst[3*(r*hw+c)+k]=
-			src[2*(3*((r+0)*w+c+0))+k]/4+src[2*(3*((r+0)*w+c+1))+k]/4+
-			src[2*(3*((r+1)*w+c+0))+k]/4+src[2*(3*((r+1)*w+c+1))+k]/4+
-			0;
-	}
-#else
-	/* 'external' version, unoptimized */
-	for(int r=0,hr=0;r<2*(h/2);++r,hr=r/2)
-	for(int c=0,hc=0;c<2*(w/2);++c,hc=c/2)
-	for(int k=0;k<3;++k)
-			dst[3*(hr*hw+hc)+k]+=src[3*(r*w+c)+k]/4;
-#endif
-	errval = FIM_ERR_NO_ERROR; 
-err:
-	return errval;
-}
-
-fim_err_t FbiStuff::fim_mipmaps_compute(const struct ida_image *src, fim_mipmap_t * mmp)
-{
-	/* 
-	   Computation of mipmaps.
-	   Mipmaps are images dimensioned (on both sides) as fractions of the original: 1/2, 1/4, ...
-	   When the user requests a scaled-down image, we can downscale the nearest mipmap, which is faster than using the original.
-	   This function was not present in Fbi.
-	*/
-	fim_mipmap_t mm; /* mipmap structure */
-	int w, h, d;
-	int mmidx = 0; /* mipmap index */
-
-	if(!src)
-	{
-		goto err;
-	}
-	w = src->i.width, h = src->i.height; /* the original */
-	mm.nmm=0;
-	mm.mmoffs[mm.nmm]=0;
-	if(FIM_WVMM) std::cout <<  3*src->i.width*src->i.height<< " bytes are needed for the original image\n";
-	for(d=2;w>=d && h>=d && mm.nmm<=FIM_MAX_MIPMAPS ;d*=2)
-	{
-		mm.mmw[mm.nmm]=w/d;
-		mm.mmh[mm.nmm]=h/d;
-		mm.mmsize[mm.nmm]=(w/d)*(h/d)*3;
-		mm.mmb+=mm.mmsize[mm.nmm];
-		mm.mmoffs[mm.nmm+1]=mm.mmb;
-		++mm.nmm;
-	}
-	if(FIM_WVMM) std::cout << mm.nmm << " mipmaps are possible\n";
-	if(FIM_WVMM) std::cout << mm.mmb << " bytes are needed for the mipmaps\n";
-	if(mm.nmm<1)
-	{
-		goto err;
-	}
-	mm.mdp=(fim_byte_t*)fim_calloc(1,mm.mmb);
-	if(!mm.mdp)
-	{
-		goto err;
-	}
-
-	if(mm.nmm)
-		mipmap_compute(w,h,w/2,h/2,src->data,mm.mdp+mm.mmoffs[0]);
-	for(mmidx=1,d=2;mmidx<mm.nmm;++mmidx,d*=2)
-	{
-		if(FIM_WVMM) std::cout << w/d << " " << h/d <<  " at " << mm.mmoffs[mmidx-1] << " ... " << mm.mmoffs[mmidx] << " : "<< mm.mmsize[mmidx] << "\n";
-		mipmap_compute(w/d,h/d,w/(2*d),h/(2*d),mm.mdp+mm.mmoffs[mmidx-1],mm.mdp+mm.mmoffs[mmidx]);
-	}
-
-    	memcpy(mmp,&mm,sizeof(mm));
-	mm.mdp = NULL; // this is to avoid mm's destructor to free(mm.mdp)
-	return FIM_ERR_NO_ERROR; 
-err:
-	return FIM_ERR_GENERIC;
-}
-#endif /* FIM_WANT_EXPERIMENTAL_MIPMAPS */
-/* ----------------------------------------------------------------------- */
-
 // filter.c
 
 /* ----------------------------------------------------------------------- */
 
 static void
-op_grayscale(const struct ida_image *src, struct ida_rect *rect,
-	     fim_byte_t *dst, int line, void *data)
+op_grayscale(struct ida_image *src, struct ida_rect *rect,
+	     unsigned char *dst, int line, void *data)
 {
-    fim_byte_t *scanline;
+    unsigned char *scanline;
     int i,g;
 
     scanline = src->data + line * src->i.width * 3;
@@ -191,7 +75,7 @@ struct op_3x3_handle {
 };
 
 static void*
-op_3x3_init(const struct ida_image *src, struct ida_rect *rect,
+op_3x3_init(struct ida_image *src, struct ida_rect *rect,
 	    struct ida_image_info *i, void *parm)
 {
     struct op_3x3_parm *args = (struct op_3x3_parm*)parm;
@@ -212,8 +96,8 @@ oops:
 }
 
 static int inline
-op_3x3_calc_pixel(struct op_3x3_parm *p, fim_byte_t *s1,
-		  fim_byte_t *s2, fim_byte_t *s3)
+op_3x3_calc_pixel(struct op_3x3_parm *p, unsigned char *s1,
+		  unsigned char *s2, unsigned char *s3)
 {
     int val = 0;
 
@@ -233,11 +117,11 @@ op_3x3_calc_pixel(struct op_3x3_parm *p, fim_byte_t *s1,
 }
 
 static void
-op_3x3_calc_line(const struct ida_image *src, struct ida_rect *rect,
+op_3x3_calc_line(struct ida_image *src, struct ida_rect *rect,
 		 int *dst, unsigned int line, struct op_3x3_parm *p)
 {
-    fim_byte_t b1[9],b2[9],b3[9];
-    fim_byte_t *s1,*s2,*s3;
+    unsigned char b1[9],b2[9],b3[9];
+    unsigned char *s1,*s2,*s3;
     unsigned int i,left,right;
 
     s1 = src->data + (line-1) * src->i.width * 3;
@@ -290,7 +174,7 @@ op_3x3_calc_line(const struct ida_image *src, struct ida_rect *rect,
 }
 
 static void
-op_3x3_clip_line(fim_byte_t *dst, int *src, int left, int right)
+op_3x3_clip_line(unsigned char *dst, int *src, int left, int right)
 {
     int i,val;
 
@@ -307,13 +191,13 @@ op_3x3_clip_line(fim_byte_t *dst, int *src, int left, int right)
 }
 
 static void
-op_3x3_work(const struct ida_image *src, struct ida_rect *rect,
-	    fim_byte_t *dst, int line, void *data)
+op_3x3_work(struct ida_image *src, struct ida_rect *rect,
+	    unsigned char *dst, int line, void *data)
 {
     struct op_3x3_handle *h = (struct op_3x3_handle *)data;
-    fim_byte_t *scanline;
+    unsigned char *scanline;
 
-    scanline = (fim_byte_t*) src->data + line * src->i.width * 3;
+    scanline = (unsigned char*) src->data + line * src->i.width * 3;
     memcpy(dst,scanline,src->i.width * 3);
     if (line < rect->y1 || line >= rect->y2)
 	return;
@@ -339,13 +223,13 @@ struct op_sharpe_handle {
 };
 
 static void*
-op_sharpe_init(const struct ida_image *src, struct ida_rect *rect,
+op_sharpe_init(struct ida_image *src, struct ida_rect *rect,
 	       struct ida_image_info *i, void *parm)
 {
     struct op_sharpe_parm *args = (struct op_sharpe_parm *)parm;
     struct op_sharpe_handle *h;
 
-    h = (struct op_sharpe_handle *)fim_calloc(1,sizeof(*h));
+    h = (struct op_sharpe_handle *)fim_calloc(sizeof(*h),1);
     if(!h)goto oops;
     h->factor  = args->factor;
     h->linebuf = (int *)fim_malloc(sizeof(int)*3*(src->i.width));
@@ -360,8 +244,8 @@ oops:
 }
 
 static void
-op_sharpe_work(const struct ida_image *src, struct ida_rect *rect,
-	       fim_byte_t *dst, int line, void *data)
+op_sharpe_work(struct ida_image *src, struct ida_rect *rect,
+	       unsigned char *dst, int line, void *data)
 {
     static struct op_3x3_parm laplace = {
 /*  	f1: {  1,  1,  1 },
@@ -373,7 +257,7 @@ op_sharpe_work(const struct ida_image *src, struct ida_rect *rect,
 	 0,0,0
     };
     struct op_sharpe_handle *h = (struct op_sharpe_handle *)data;
-    fim_byte_t *scanline;
+    unsigned char *scanline;
     int i;
 
     scanline = src->data + line * src->i.width * 3;
@@ -405,22 +289,20 @@ struct op_resize_state {
 };
 
 static void*
-op_resize_init(const struct ida_image *src, struct ida_rect *rect,
+op_resize_init(struct ida_image *src, struct ida_rect *rect,
 	       struct ida_image_info *i, void *parm)
 {
     struct op_resize_parm *args = (struct op_resize_parm *)parm;
     struct op_resize_state *h;
 
-    h = (struct op_resize_state *)fim_calloc(1,sizeof(*h));
-    if(!h)
-	    goto oops;
+    h = (struct op_resize_state *)fim_calloc(sizeof(*h),1);
+    if(!h)goto oops;
     h->width  = args->width;
     h->height = args->height;
     h->xscale = (float)args->width/src->i.width;
     h->yscale = (float)args->height/src->i.height;
     h->rowbuf = (float*)fim_malloc(src->i.width * 3 * sizeof(float));
-    if(!h->rowbuf)
-	    goto oops;
+    if(!h->rowbuf)goto oops;
     h->srcrow = 0;
     h->inleft = 1;
 
@@ -430,20 +312,18 @@ op_resize_init(const struct ida_image *src, struct ida_rect *rect,
     i->dpi    = args->dpi;
     return h;
     oops:
-    if(h)
-	    fim_free(h);
+    if(h)fim_free(h);
     return NULL;
 }
 
-#define FIM_HAS_MISC_FBI_OPS 1
-#ifdef FIM_HAS_MISC_FBI_OPS
-void op_resize_work_row_expand(struct ida_image *src, struct ida_rect *rect, fim_byte_t *dst, int line, void *data)
+#if 1
+void op_resize_work_row_expand(struct ida_image *src, struct ida_rect *rect, unsigned char *dst, int line, void *data)
 {
 	struct op_resize_state *h = (struct op_resize_state *)data;
 //#ifndef FIM_WANTS_SLOW_RESIZE	/*uncommenting this triggers failure */
        int sr=h->srcrow;if(sr<0)sr=-sr;//who knows
-//#endif /* FIM_WANTS_SLOW_RESIZE */
-	fim_byte_t* srcline=src->data+src->i.width*3*(sr);
+//#endif
+	unsigned char* srcline=src->data+src->i.width*3*(sr);
 	const int Mdx=h->width;
 	register int sx=0,dx;
 
@@ -487,10 +367,10 @@ void op_resize_work_row_expand(struct ida_image *src, struct ida_rect *rect, fim
 }
 
 
-static inline void op_resize_work_row_expand_i_unrolled(const struct ida_image *src, struct ida_rect *rect, fim_byte_t *dst, int line, void *data, int sr)
+inline void op_resize_work_row_expand_i_unrolled(struct ida_image *src, struct ida_rect *rect, unsigned char *dst, int line, void *data, int sr)
 {
 	struct op_resize_state *h = (struct op_resize_state *)data;
-	const fim_byte_t* srcline=src->data+src->i.width*3*(sr);
+	unsigned char* srcline=src->data+src->i.width*3*(sr);
 	const int Mdx=h->width;
 	register int sx,dx;
 	/*
@@ -581,10 +461,10 @@ static inline void op_resize_work_row_expand_i_unrolled(const struct ida_image *
 		if(line==(int)h->height-1)for (dx=0;dx<Mdx;++dx ) { dst[3*dx+0]=0x00; dst[3*dx+1]=0x00; dst[3*dx+2]=0x00; }dx=0;
 }
 
-const inline void op_resize_work_unrolled4_row_expand(const struct ida_image *src, struct ida_rect *rect, fim_byte_t *FIM_RSTRCT dst, int line, void *FIM_RSTRCT data, int sr)
+inline void op_resize_work_unrolled4_row_expand(struct ida_image *src, struct ida_rect *rect, unsigned char *dst, int line, void *data, int sr)
 {
-	struct op_resize_state *FIM_RSTRCT h = (struct op_resize_state *)data;
-	const fim_byte_t*FIM_RSTRCT  srcline=src->data+src->i.width*3*(sr);
+	struct op_resize_state *h = (struct op_resize_state *)data;
+	unsigned char* srcline=src->data+src->i.width*3*(sr);
 	const int Mdx=h->width;
 	register int sx,dx;
 
@@ -601,7 +481,7 @@ const inline void op_resize_work_unrolled4_row_expand(const struct ida_image *sr
 			d1f+=h->xscale;
 			d1i=(unsigned int)d1f;
 
-			register fim_byte_t r,g,b;
+			register unsigned char r,g,b;
 			r=srcline[  3*sx+ 0];
 			g=srcline[  3*sx+ 1];
 			b=srcline[  3*sx+ 2];
@@ -646,10 +526,10 @@ const inline void op_resize_work_unrolled4_row_expand(const struct ida_image *sr
 		if(line==(int)h->height-1)for (dx=0;dx<Mdx;++dx ) { dst[3*dx+0]=0x00; dst[3*dx+1]=0x00; dst[3*dx+2]=0x00; }dx=0;
 }
 
-static inline void op_resize_work_unrolled2_row_expand(const struct ida_image *src, struct ida_rect *rect, fim_byte_t *dst, int line, void *data, int sr)
+inline void op_resize_work_unrolled2_row_expand(struct ida_image *src, struct ida_rect *rect, unsigned char *dst, int line, void *data, int sr)
 {
 	struct op_resize_state *h = (struct op_resize_state *)data;
-	fim_byte_t* srcline=src->data+src->i.width*3*(sr);
+	unsigned char* srcline=src->data+src->i.width*3*(sr);
 	const int Mdx=h->width;
 	register int sx,dx;
 
@@ -666,7 +546,7 @@ static inline void op_resize_work_unrolled2_row_expand(const struct ida_image *s
 			d1f+=h->xscale;
 			d1i=(unsigned int)d1f;
 
-			register fim_byte_t r,g,b;
+			register unsigned char r,g,b;
 			r=srcline[  3*sx+ 0];
 			g=srcline[  3*sx+ 1];
 			b=srcline[  3*sx+ 2];
@@ -706,26 +586,25 @@ static inline void op_resize_work_unrolled2_row_expand(const struct ida_image *s
 		if(line==(int)h->height-1)for (dx=0;dx<Mdx;++dx ) { dst[3*dx+0]=0x00; dst[3*dx+1]=0x00; dst[3*dx+2]=0x00; }dx=0;
 }
 
-#endif /* FIM_HAS_MISC_FBI_OPS */
+#endif
+
 static void
-op_resize_work(const struct ida_image *FIM_RSTRCT src, struct ida_rect *rect,
-	       fim_byte_t *FIM_RSTRCT dst, int line, void *FIM_RSTRCT data)
+op_resize_work(struct ida_image *src, struct ida_rect *rect,
+	       unsigned char *dst, int line, void *data)
 {
-    struct op_resize_state *FIM_RSTRCT h = (struct op_resize_state *)data;
+    struct op_resize_state *h = (struct op_resize_state *)data;
     float outleft,left,weight,d0,d1,d2;
-    const fim_byte_t *FIM_RSTRCT csrcline;
-    float *FIM_RSTRCT fsrcline;
+    unsigned char *csrcline;
+    float *fsrcline;
+
     register unsigned int i,sx,dx;
-    float *FIM_RSTRCT rowbuf = h->rowbuf; 
 
 #ifndef FIM_WANTS_SLOW_RESIZE
-    int sr=h->srcrow;
-    if(sr<0)
-	    sr=-sr;//who knows
-#endif /* FIM_WANTS_SLOW_RESIZE */
+    int sr=h->srcrow;if(sr<0)sr=-sr;//who knows
+#endif
 
     /* scale y */
-    fim_bzero(rowbuf, src->i.width * 3 * sizeof(float));
+    memset(h->rowbuf, 0, src->i.width * 3 * sizeof(float));
     outleft = 1/h->yscale;
     while (outleft > 0  &&  h->srcrow < src->i.height) {
 	if (outleft < h->inleft) {
@@ -738,13 +617,13 @@ op_resize_work(const struct ida_image *FIM_RSTRCT src, struct ida_rect *rect,
 	    h->inleft  = 0;
 	}
 #if 0
-	if (cc.displaydevice_->debug_)
+	if (cc.displaydevice->debug)
 	    FIM_FBI_PRINTF("y:  %6.2f%%: %d/%d => %d/%d\n",
 		    weight*100,h->srcrow,src->height,line,h->height);
 #endif
 	csrcline = src->data + h->srcrow * src->i.width * 3;
 	for (i = 0; i < src->i.width * 3; i++)
-	    rowbuf[i] += (float)csrcline[i] * weight;
+	    h->rowbuf[i] += (float)csrcline[i] * weight;
 	if (0 == h->inleft) {
 	    h->inleft = 1;
 	    h->srcrow++;
@@ -765,8 +644,8 @@ op_resize_work(const struct ida_image *FIM_RSTRCT src, struct ida_rect *rect,
 	if(h->xscale>1.0)//here we handle the case of magnification
 	{
 #ifdef FIM_WANTS_SLOW_RESIZE
-		fim_byte_t*FIM_RSTRCT srcline=src->data+src->i.width*3*(sr);
-#endif /* FIM_WANTS_SLOW_RESIZE */
+		unsigned char* srcline=src->data+src->i.width*3*(sr);
+#endif
 
 #ifndef FIM_WANTS_SLOW_RESIZE
 		if(h->xscale>2.0)
@@ -780,7 +659,7 @@ op_resize_work(const struct ida_image *FIM_RSTRCT src, struct ida_rect *rect,
 			op_resize_work_row_expand_i_unrolled( src, rect, dst, line, data, sr);
 //			op_resize_work_row_expand( src, rect, dst, line, data);
 
-#else /* FIM_WANTS_SLOW_RESIZE */
+#else
 		float fsx=0.0;
 		for (sx=0,dx=0; dx<Mdx; ++dx)
 		{
@@ -794,13 +673,13 @@ op_resize_work(const struct ida_image *FIM_RSTRCT src, struct ida_rect *rect,
 	#else
 			fsx+=c_outleft;
 			sx=((unsigned int)fsx)%src->i.width;// % is (maybe) essential
-			dst[0] = (fim_byte_t) fsrcline[3*sx];
-			dst[1] = (fim_byte_t) fsrcline[3*sx+1]; 
-			dst[2] = (fim_byte_t) fsrcline[3*sx+2] ;
+			dst[0] = (unsigned char) fsrcline[3*sx];
+			dst[1] = (unsigned char) fsrcline[3*sx+1]; 
+			dst[2] = (unsigned char) fsrcline[3*sx+2] ;
 			dst += 3;
 	#endif
 		}
-#endif /* FIM_WANTS_SLOW_RESIZE */
+#endif
 	}
 #define ZEROF 0.0f
 	else    // image minification
@@ -826,9 +705,9 @@ op_resize_work(const struct ida_image *FIM_RSTRCT src, struct ida_rect *rect,
 		sx++;
 	    }
 	}
-	dst[0] = (fim_byte_t)d0;
-	dst[1] = (fim_byte_t)d1;
-	dst[2] = (fim_byte_t)d2;
+	dst[0] = (unsigned char)d0;
+	dst[1] = (unsigned char)d1;
+	dst[2] = (unsigned char)d2;
 	dst += 3;
     }
 	return ;
@@ -851,7 +730,7 @@ op_resize_work(const struct ida_image *FIM_RSTRCT src, struct ida_rect *rect,
 		left     = 0;
 	    }
 #if 0
-	    if (cc.displaydevice_->debug_)
+	    if (cc.displaydevice->debug)
 		FIM_FBI_PRINTF(" x: %6.2f%%: %d/%d => %d/%d\n",
 			weight*100,sx,src->width,dx,h->width);
 #endif
@@ -863,12 +742,12 @@ op_resize_work(const struct ida_image *FIM_RSTRCT src, struct ida_rect *rect,
 		sx++;
 	    }
 	}
-	dst[0] = (fim_byte_t)d0;
-	dst[1] = (fim_byte_t)d1;
-	dst[2] = (fim_byte_t)d2;
+	dst[0] = (unsigned char)d0;
+	dst[1] = (unsigned char)d1;
+	dst[2] = (unsigned char)d2;
 	dst += 3;
     }
-#endif /* FIM_WANTS_SLOW_RESIZE */
+#endif
 }
 
 static void
@@ -889,7 +768,7 @@ struct op_rotate_state {
 };
 
 static void*
-op_rotate_init(const struct ida_image *src, struct ida_rect *rect,
+op_rotate_init(struct ida_image *src, struct ida_rect *rect,
 	       struct ida_image_info *i, void *parm)
 {
     struct op_rotate_parm *args = (struct op_rotate_parm *)parm;
@@ -933,10 +812,10 @@ op_rotate_init(const struct ida_image *src, struct ida_rect *rect,
 }
 
 static inline
-fim_byte_t* op_rotate_getpixel(const struct ida_image *src, struct ida_rect *rect,
+unsigned char* op_rotate_getpixel(struct ida_image *src, struct ida_rect *rect,
 				  int sx, int sy, int dx, int dy)
 {
-    static fim_byte_t black[] = { 0, 0, 0};
+    static unsigned char black[] = { 0, 0, 0};
 #if 0
     int xdiff  =   rect->x2 - rect->x1;
     int ydiff  =   rect->y2 - rect->y1;
@@ -963,11 +842,11 @@ fim_byte_t* op_rotate_getpixel(const struct ida_image *src, struct ida_rect *rec
 }
 
 static void
-op_rotate_work(const struct ida_image *src, struct ida_rect *rect,
-	       fim_byte_t *dst, int y, void *data)
+op_rotate_work(struct ida_image *src, struct ida_rect *rect,
+	       unsigned char *dst, int y, void *data)
 {
     struct op_rotate_state *h = (struct op_rotate_state *) data;
-    fim_byte_t *pix;
+    unsigned char *pix;
     float fx,fy,w;
     int x,sx,sy;
 
@@ -983,7 +862,7 @@ op_rotate_work(const struct ida_image *src, struct ida_rect *rect,
     sx = (int)fx;
     sx *= 0;
     dst += 3*(h->calc.x1+sx);*/
-    fim_bzero(dst, (h->calc.x2-h->calc.x1) * 3);
+    memset(dst, 0, (h->calc.x2-h->calc.x1) * 3);
    for (x = h->calc.x1; x < h->calc.x2; x++, dst+=3) {
 	fx = h->cosa * (x - h->cx) - h->sina * (y - h->cy) + h->cx;
 	fy = h->sina * (x - h->cx) + h->cosa * (y - h->cy) + h->cy;
@@ -998,24 +877,24 @@ op_rotate_work(const struct ida_image *src, struct ida_rect *rect,
 
 	pix = op_rotate_getpixel(src,rect,sx,sy,x,y);
 	w = (1-fx) * (1-fy);
-	dst[0] += (fim_byte_t)(pix[0] * w);
-	dst[1] += (fim_byte_t)(pix[1] * w);
-	dst[2] += (fim_byte_t)(pix[2] * w);
+	dst[0] += (unsigned char)(pix[0] * w);
+	dst[1] += (unsigned char)(pix[1] * w);
+	dst[2] += (unsigned char)(pix[2] * w);
 	pix = op_rotate_getpixel(src,rect,sx+1,sy,x,y);
 	w = fx * (1-fy);
-	dst[0] += (fim_byte_t)(pix[0] * w);
-	dst[1] += (fim_byte_t)(pix[1] * w);
-	dst[2] += (fim_byte_t)(pix[2] * w);
+	dst[0] += (unsigned char)(pix[0] * w);
+	dst[1] += (unsigned char)(pix[1] * w);
+	dst[2] += (unsigned char)(pix[2] * w);
 	pix = op_rotate_getpixel(src,rect,sx,sy+1,x,y);
 	w = (1-fx) * fy;
-	dst[0] += (fim_byte_t)(pix[0] * w);
-	dst[1] += (fim_byte_t)(pix[1] * w);
-	dst[2] += (fim_byte_t)(pix[2] * w);
+	dst[0] += (unsigned char)(pix[0] * w);
+	dst[1] += (unsigned char)(pix[1] * w);
+	dst[2] += (unsigned char)(pix[2] * w);
 	pix = op_rotate_getpixel(src,rect,sx+1,sy+1,x,y);
 	w = fx * fy;
-	dst[0] += (fim_byte_t)(pix[0] * w);
-	dst[1] += (fim_byte_t)(pix[1] * w);
-	dst[2] += (fim_byte_t)(pix[2] * w);
+	dst[0] += (unsigned char)(pix[0] * w);
+	dst[1] += (unsigned char)(pix[1] * w);
+	dst[2] += (unsigned char)(pix[2] * w);
     }
 }
 
@@ -1027,15 +906,6 @@ op_rotate_done(void *data)
     fim_free(h);
 }
 
-/* ----------------------------------------------------------------------- */
-void  op_none_done(void *data) {}
-static fim_byte_t op_none_data;
-void* op_none_init(const struct ida_image *src,  struct ida_rect *sel,
-		   struct ida_image_info *i, void *parm)
-{
-    *i = src->i;
-    return &op_none_data;
-}
 /* ----------------------------------------------------------------------- */
 
 struct ida_op desc_grayscale = {
@@ -1083,26 +953,26 @@ struct ida_op desc_rotate = {
 /* ----------------------------------------------------------------------- */
 /* functions                                                               */
 
-static fim_byte_t op_none_data_;
+static char op_none_data_;
 
 static void
-op_flip_vert_(const struct ida_image *src, struct ida_rect *rect,
-	     fim_byte_t *dst, int line, void *data)
+op_flip_vert_(struct ida_image *src, struct ida_rect *rect,
+	     unsigned char *dst, int line, void *data)
 {
-    fim_byte_t *scanline;
+    char *scanline;
 
-    scanline = (fim_byte_t*)src->data + (src->i.height - line - 1) * src->i.width * 3;
+    scanline = (char*)src->data + (src->i.height - line - 1) * src->i.width * 3;
     memcpy(dst,scanline,src->i.width*3);
 }
 
 static void
-op_flip_horz_(const struct ida_image *src, struct ida_rect *rect,
-	     fim_byte_t *dst, int line, void *data)
+op_flip_horz_(struct ida_image *src, struct ida_rect *rect,
+	     unsigned char *dst, int line, void *data)
 {
-    fim_byte_t *scanline;
+    char *scanline;
     unsigned int i;
 
-    scanline = (fim_byte_t*)src->data + (line+1) * src->i.width * 3;
+    scanline = (char*)src->data + (line+1) * src->i.width * 3;
     for (i = 0; i < src->i.width; i++) {
 	scanline -= 3;
 	dst[0] = scanline[0];
@@ -1113,7 +983,7 @@ op_flip_horz_(const struct ida_image *src, struct ida_rect *rect,
 }
 
 static void*
-op_rotate_init_(const struct ida_image *src, struct ida_rect *rect,
+op_rotate_init_(struct ida_image *src, struct ida_rect *rect,
 	       struct ida_image_info *i, void *parm)
 {
     *i = src->i;
@@ -1124,13 +994,13 @@ op_rotate_init_(const struct ida_image *src, struct ida_rect *rect,
 }
 
 static void
-op_rotate_cw_(const struct ida_image *src, struct ida_rect *rect,
-	     fim_byte_t *dst, int line, void *data)
+op_rotate_cw_(struct ida_image *src, struct ida_rect *rect,
+	     unsigned char *dst, int line, void *data)
 {
-    fim_byte_t *pix;
+    char *pix;
     unsigned int i;
 
-    pix = (fim_byte_t*) src->data + src->i.width * src->i.height * 3 + line * 3;
+    pix = (char*) src->data + src->i.width * src->i.height * 3 + line * 3;
     for (i = 0; i < src->i.height; i++) {
 	pix -= src->i.width * 3;
 	dst[0] = pix[0];
@@ -1141,13 +1011,13 @@ op_rotate_cw_(const struct ida_image *src, struct ida_rect *rect,
 }
 
 static void
-op_rotate_ccw_(const struct ida_image *src, struct ida_rect *rect,
-	      fim_byte_t *dst, int line, void *data)
+op_rotate_ccw_(struct ida_image *src, struct ida_rect *rect,
+	      unsigned char *dst, int line, void *data)
 {
-    fim_byte_t *pix;
+    char *pix;
     unsigned int i;
 
-    pix = (fim_byte_t*) src->data + (src->i.width-line-1) * 3;
+    pix = (char*) src->data + (src->i.width-line-1) * 3;
     for (i = 0; i < src->i.height; i++) {
 	dst[0] = pix[0];
 	dst[1] = pix[1];
@@ -1158,10 +1028,10 @@ op_rotate_ccw_(const struct ida_image *src, struct ida_rect *rect,
 }
 
 static void
-op_invert_(const struct ida_image *src, struct ida_rect *rect,
-	  fim_byte_t *dst, int line, void *data)
+op_invert_(struct ida_image *src, struct ida_rect *rect,
+	  unsigned char *dst, int line, void *data)
 {
-    fim_byte_t *scanline;
+    unsigned char *scanline;
     int i;
 
     scanline = src->data + line * src->i.width * 3;
@@ -1180,7 +1050,7 @@ op_invert_(const struct ida_image *src, struct ida_rect *rect,
 }
 
 static void*
-op_crop_init_(const struct ida_image *src, struct ida_rect *rect,
+op_crop_init_(struct ida_image *src, struct ida_rect *rect,
 	     struct ida_image_info *i, void *parm)
 {
     if (rect->x2 - rect->x1 == (int)src->i.width &&
@@ -1193,10 +1063,10 @@ op_crop_init_(const struct ida_image *src, struct ida_rect *rect,
 }
 
 static void
-op_crop_work_(const struct ida_image *src, struct ida_rect *rect,
-	     fim_byte_t *dst, int line, void *data)
+op_crop_work_(struct ida_image *src, struct ida_rect *rect,
+	     unsigned char *dst, int line, void *data)
 {
-    fim_byte_t *scanline;
+    unsigned char *scanline;
     int i;
 
     scanline = src->data + (line+rect->y1) * src->i.width * 3 + rect->x1 * 3;
@@ -1210,7 +1080,7 @@ op_crop_work_(const struct ida_image *src, struct ida_rect *rect,
 }
 
 static void*
-op_autocrop_init_(const struct ida_image *src, struct ida_rect *unused,
+op_autocrop_init_(struct ida_image *src, struct ida_rect *unused,
 		 struct ida_image_info *i, void *parm)
 {
 #ifdef FIM_USE_DESIGNATED_INITIALIZERS
@@ -1229,11 +1099,11 @@ op_autocrop_init_(const struct ida_image *src, struct ida_rect *unused,
 	/*f2:*/ { -1,  8, -1 },
 	/*f3:*/ { -1, -1, -1 },
     };
-#endif /* FIM_USE_DESIGNATED_INITIALIZERS */
+#endif
     struct ida_rect rect;
     struct ida_image img;
     int x,y,limit;
-    fim_byte_t *line;
+    unsigned char *line;
     void *data;
     
     /* detect edges */
@@ -1243,7 +1113,7 @@ op_autocrop_init_(const struct ida_image *src, struct ida_rect *unused,
     rect.y2 = src->i.height;
     data = desc_3x3.init(src, &rect, &img.i, &filter);
 
-    img.data   = (fim_byte_t*)fim_pm_alloc(img.i.width, img.i.height);
+    img.data   = (unsigned char*)fim_malloc(img.i.width * img.i.height * 3);
     if(!img.data)return NULL;
 
     for (y = 0; y < (int)img.i.height; y++)
@@ -1302,7 +1172,7 @@ op_autocrop_init_(const struct ida_image *src, struct ida_rect *unused,
     rect.x2 = x+1;
 
     fim_free(img.data);
-    if (cc.displaydevice_->debug_)
+    if (cc.displaydevice->debug)
 	FIM_FBI_PRINTF("y: %d-%d/%d  --  x: %d-%d/%d\n",
 		rect.y1, rect.y2, img.i.height,
 		rect.x1, rect.x2, img.i.width);
@@ -1318,6 +1188,17 @@ op_autocrop_init_(const struct ida_image *src, struct ida_rect *unused,
 }
 
 /* ----------------------------------------------------------------------- */
+
+static char op_none_data;
+
+void* op_none_init(struct ida_image *src,  struct ida_rect *sel,
+		   struct ida_image_info *i, void *parm)
+{
+    *i = src->i;
+    return &op_none_data;
+}
+
+void  op_none_done(void *data) {}
 void  op_free_done(void *data) { fim_free(data); }
 
 /* ----------------------------------------------------------------------- */
@@ -1380,40 +1261,28 @@ struct ida_op desc_autocrop = {
 
 #ifdef USE_X11
 # include "viewer.h"
-#endif /* USE_X11 */
+#endif
 
 /* ---------------------------------------------------------------------- */
 /* load                                                                   */
 
 
-#ifdef HAVE_LIBGRAPHICSMAGICK
-	extern struct ida_loader magick_loader ;
-#endif /* HAVE_LIBGRAPHICSMAGICK */
-
 #ifdef FIM_WITH_LIBPNG 
 	extern struct ida_loader png_loader ;
-#endif /* FIM_WITH_LIBPNG */
+#endif
 
 extern struct ida_loader ppm_loader ;
 extern struct ida_loader pgm_loader ;
-#if FIM_WANT_TEXT_RENDERING
-extern struct ida_loader text_loader ;
-#endif /* FIM_WANT_TEXT_RENDERING */
-#if FIM_WANT_RAW_BITS_RENDERING
 extern struct ida_loader bit24_loader ;
 extern struct ida_loader bit1_loader ;
-#endif /* FIM_WANT_RAW_BITS_RENDERING */
-#if FIM_WITH_UFRAW
-extern struct ida_loader nef_loader ;
-#endif /* FIM_WITH_UFRAW */
 
 // 20080108 WARNING
 // 20080801 removed the loader functions from this file, as init_rd was not __init : did I break something ?
 //static void __init init_rd(void)
 /*static void init_rd(void)
 {
-    fim_load_register(&ppm_loader);
-    fim_load_register(&pgm_loader);
+    load_register(&ppm_loader);
+    load_register(&pgm_loader);
 }*/
 
 #ifdef USE_X11
@@ -1443,9 +1312,9 @@ static struct ida_writer ppm_writer = {
 //static void __init init_wr(void)
 static void init_wr(void)
 {
-    fim_write_register(&ppm_writer);
+    write_register(&ppm_writer);
 }
-#endif /* USE_X11 */
+#endif
 
 
 
@@ -1460,7 +1329,7 @@ void FbiStuff::free_image(struct ida_image *img)
     }
 }
 
-FILE* FbiStuff::fim_execlp(const fim_char_t *cmd, ...)
+FILE* FbiStuff::fim_execlp(const char *cmd, ...)
 {
 	/* new */
 	va_list ap;
@@ -1468,24 +1337,24 @@ FILE* FbiStuff::fim_execlp(const fim_char_t *cmd, ...)
 	FILE *fp=NULL;
 	int p[2];
 	#define FIM_SUBPROCESS_MAXARGV 128
-	fim_char_t * argv[FIM_SUBPROCESS_MAXARGV],*s;	/* FIXME */
+	char * argv[FIM_SUBPROCESS_MAXARGV],*s;	/* FIXME */
 	int argc=0;
 	if(0!=pipe(p))
-		goto err;
+		return NULL;
 
 	switch(fork())
 	{
 		case -1:
-		fim_perror("fork");
+		perror("fork");
 		close(p[0]);
 		close(p[1]);
-		goto err; // FIXME
+		return NULL;
 		case 0:/* child */
 		dup2(p[1],1/*stdout*/);
 		close(p[0]);
 		close(p[1]);
 	        va_start(ap,cmd);
-		while(NULL!=(s=va_arg(ap,fim_char_t*)) && argc<FIM_SUBPROCESS_MAXARGV-1)
+		while(NULL!=(s=va_arg(ap,char*)) && argc<FIM_SUBPROCESS_MAXARGV-1)
 		{
 			argv[argc]=s;
 			argc++;
@@ -1499,14 +1368,13 @@ FILE* FbiStuff::fim_execlp(const fim_char_t *cmd, ...)
 		close(p[1]);
 		fp = fdopen(p[0],"r");
 		if(NULL==fp)
-			goto err;
+			return NULL;
 		return fp;
 	}
-err:
 	return NULL;
 }
 
-static long find_regexp_offset(FILE *fp, const fim_char_t *byte_stream, size_t base_offset)
+static long find_regexp_offset(FILE *fp, const char *byte_stream, size_t base_offset)
 {
 	/*
 		FIXME : EXPERIMENTAL, UNFINISHED
@@ -1515,25 +1383,25 @@ static long find_regexp_offset(FILE *fp, const fim_char_t *byte_stream, size_t b
 	*/
 	/*size_t*/
 	/*l ong*/
-	int  rb,sl,off,goff=0;
-	fim_char_t buf[FIM_FILE_BUF_SIZE];
+	int  read_offset=0,rb,sl,off,goff=0;
+	char buf[FIM_FILE_BUF_SIZE];
+	int rs;/* FIXME : could overflow */
 
 	if(!byte_stream)
-		goto err;/* bad argument */
+		return 0;/* bad argument */
 
 	sl=strlen(byte_stream);
 
 	if(sl>FIM_FILE_BUF_SIZE-1)
-		goto err;/* FIXME : a limitation */
+		return 0;/* FIXME : a limitation */
 
 	if(base_offset)
 	{
-		//printf("%x%x\n",byte_stream[0],byte_stream[1]);
-    		if(fim_fseek(fp,base_offset,SEEK_SET)!=0);// NEW
+    		if(fseek(fp,base_offset,SEEK_SET)!=0);// NEW
 		{
-    			// fim_fseek(fp,0,SEEK_SET);
+    			// fseek(fp,0,SEEK_SET);
 			// should handle in some better way..
-			goto err;
+			return 0;
 		}
 		goff=base_offset;
 	}
@@ -1541,9 +1409,9 @@ static long find_regexp_offset(FILE *fp, const fim_char_t *byte_stream, size_t b
 		goff+=ftell(fp);
 
 	/* we read in a good chunk of the file */
-	while((rb=fim_fread(buf,1,FIM_FILE_BUF_SIZE,fp))>0)
+	while((rb=fread(buf,1,FIM_FILE_BUF_SIZE,fp))>0)
 	{
-		fim_bzero(buf+rb,(FIM_FILE_BUF_SIZE-rb));/* sanitization */
+		bzero(buf,(FIM_FILE_BUF_SIZE-rb));/* sanitization */
 		off=rb-sl;
 		while( off > 0 )
 		{
@@ -1560,413 +1428,137 @@ static long find_regexp_offset(FILE *fp, const fim_char_t *byte_stream, size_t b
 		goff+=off;
 		goff+=rb;
 	}
-err:
 	return 0;
 }
 
-static void rgb2bgr(fim_byte_t *data, const fim_coo_t w, const fim_coo_t h) 
-{
-
-	register fim_byte_t t;
-	register fim_byte_t *p=data,
-		 	*pm=p+w*3*h;
-	while(p<pm)
-	{
-            t=*p;
-            *p=p[2];
-            p[2]=t;
-	    p+=3;
-	}
-}
-
 /*static struct ida_image**/
-struct ida_image* FbiStuff::read_image(const fim_char_t *filename, FILE* fd, fim_int page, Namespace *nsp)
+struct ida_image* FbiStuff::read_image(char *filename, FILE* fd, int page)
 {
     /*
      * This function is complicated and should be reworked, in some way.
      * FIXME : many memory allocations are not checked for failure: DANGER
      * */
-    fim_char_t command[FIM_PIPE_CMD_BUFSIZE]; /* FIXME: overflow risk ! */
+    char command[1024];
     struct ida_loader *loader = NULL;
     struct ida_image *img=NULL;
     struct list_head *item=NULL;
-    fim_char_t blk[FIM_FILE_PROBE_BLKSIZE];
-    FILE *fp=NULL;
+    char blk[512];
+    FILE *fp;
     unsigned int y;
-    void *data=NULL;
+    void *data;
     int fr=0;
-#if FIM_HAVE_FULL_PROBING_LOADER
-    bool rozlsl=false;/* retry on zero length signature loader */
-#endif /* FIM_HAVE_FULL_PROBING_LOADER */
-#if FIM_ALLOW_LOADER_VERBOSITY
-    /*const*/ fim_int vl=(cc.getIntVariable(FIM_VID_VERBOSITY)&FIM_CNS_VERBOSITY_LOADER);
-#else /* FIM_ALLOW_LOADER_VERBOSITY */
-    /*const*/ fim_int vl=0;
-#endif /* FIM_ALLOW_LOADER_VERBOSITY */
-#if FIM_SHALL_BUFFER_STDIN
-    fim_byte_t * sbuf=NULL;
-    //fim_size_t sbbs=NULL;
-    size_t sbbs=NULL;
-#endif /* FIM_SHALL_BUFFER_STDIN */
-    int want_retry=0;
-    long read_offset = 0, read_offset_u = 0;
-#if FIM_WITH_ARCHIVE
-    int npages = 0;
-    fim::string re = cc.getGlobalStringVariable(FIM_VID_ARCHIVE_FILES);
-
-    FIM_PR('*');
-    if( re == FIM_CNS_EMPTY_STRING )
-	    re = FIM_CNS_ARCHIVE_RE;
-#endif /* FIM_WITH_ARCHIVE */
     
-    //if(vl)FIM_VERB_PRINTF("approaching loading \"%s\", FILE*:%p\n",filename,fd);
-    if(vl)
-	    FIM_VERB_PRINTF("approaching loading page %d of \"%s\"\n",(int)page,filename);
     //WARNING
     //new_image = 1;
 
-#if FIM_SHALL_BUFFER_STDIN
-    if(fd!=NULL)
-    if(strcmp(filename,FIM_STDIN_IMAGE_NAME)==0) 
-    {
-	    if(vl)
-		    FIM_VERB_PRINTF("will attempt to use fmemopen\n");
-
-	    sbuf=slurp_binary_FD(fd,&sbbs);
-	    if(sbuf==NULL || !sbbs)
-	    {
-		if(sbuf)fim_free(sbuf);
-    		if(vl)FIM_VERB_PRINTF("problems slurping the file\n");
-	    }
-	    else
-	    {
-		fd=fmemopen(sbuf,sbbs,"rb");
-    		if(vl)FIM_VERB_PRINTF("using fmemopen\n");
-	    }
-    }
-#endif /* FIM_SHALL_BUFFER_STDIN */
     // Warning: this fd passing 
     // is a trick for reading stdin...
     // ... and it is simpler that rewriting loader stuff.
     // but much dirtier :/
-    if(fd==NULL){
+    if(fd==NULL) {
     /* open file */
-    if (NULL == (fp = fim_fopen(filename, "r"))) {
+    if (NULL == (fp = fopen(filename, "r"))) {
 	//comment by dez, temporary
-	if(cc.displaydevice_->debug_)
+	if(cc.displaydevice->debug)
 		FIM_FBI_PRINTF("open %s: %s\n",filename,strerror(errno));
 	return NULL;
     }
     } else fp=fd;
 
-#if FIM_WITH_ARCHIVE
-    if( regexp_match(filename,re.c_str(),1) )
-    {
-	struct archive *a = NULL;
-	struct archive_entry *entry = NULL;
-	int r,pi;
-	size_t bs = 10240;
-	re = cc.getGlobalStringVariable(FIM_VID_PUSHDIR_RE);
-
-	if( re == FIM_CNS_EMPTY_STRING )
-		re = FIM_CNS_PUSHDIR_RE;
-
-	if( fim_getenv("PAGE") )
-		page = fim_atoi( fim_getenv("PAGE") );
-
-	a = archive_read_new();
-	if (a == NULL)
-		goto noa;
-	archive_read_support_format_all(a);
-	archive_read_support_filter_all(a);
-	r = archive_read_open_filename(a, filename, bs); // filename=NULL for stdin
-	if (r != ARCHIVE_OK)
-	{
-		printf("Problems opening archive %s\n",filename);
-		goto noa;
-	}
-
-	for (pi=0;;)
-	{
-                const char * pn = NULL;
-		r = archive_read_next_header(a, &entry);
-      		if (r == ARCHIVE_EOF)
-		{
-			npages = pi  ;
-			if(vl)
-				printf("ARCHIVE_EOF reached after %d files.\n",(int)npages);
-			break;
-		}
-		if (r != ARCHIVE_OK)
-		{
-			printf("Problems reading header of %s\n",filename);
-			break;
-		}
-		pn = archive_entry_pathname(entry);
-
-    		if( pn && regexp_match(pn,re.c_str(),1) && strlen(pn)>0 && pn[strlen(pn)-1] != FIM_CNS_DIRSEP_CHAR ) /* skip directories */
-		{
-			//std::cout << re << " " << pi << " " << pn << " " << page  << ".\n"; // FIXME
-			if(pi == page)
-			{
-				static int fap[2];
-    				if(vl)
-					printf("Opening page %d of %s, subfile %s\n",(int)page,filename,pn);
-				//archive_read_data_into_fd(a,1);
-				if(0)
-				{
-					const void *buff = NULL;
-					int64_t offset = 0;
-					size_t tsize = 0, size = 0;
-
-					if( 0 != pipe2(fap,O_NONBLOCK) )
-					//if( 0 != pipe(fap) )
-						goto noa;
-					printf("Pipe to %s\n",pn);
-
-					tsize = 0, size = 0;
-					for (;;) {
-						r = archive_read_data_block(a, &buff, &size, &offset);
-						if (r == ARCHIVE_EOF)
-							break;
-						if (r != ARCHIVE_OK)
-							break;
-						write(fap[1],buff,size);
-						tsize += size;
-						// ...
-					}
-					printf("piped %zd bytes\n",(size_t)tsize);
-					close(fap[1]);
-					fp = fdopen(fap[0],"r");
-					fd = NULL;
-					fp = fim_fread_tmpfile(fp); // FIXME: a pipe saturates quickly (at 64 k on recent Linux...)
-					close(fap[0]);
-				}
-				else
-				{
-					FILE *tfd=NULL;
-					if( ( tfd=tmpfile() )!=NULL )
-					{	
-						int tfp = fileno(tfd);
-						r = archive_read_data_into_fd(a,tfp);
-						rewind(tfd);
-						fd = NULL;
-						fp = tfd;
-					}
-					else
-					{
-						std::cout << "Problem opening embedded file!\n"; // FIXME
-						archive_read_data_skip(a);
-					}
-				}
-				filename = FIM_STDIN_IMAGE_NAME;
-			}
-			else
-			{
-				//archive_read_data_skip(a);
-				if(vl)printf("SKIPPING MATCHING [%d/%d] %s in %s\n",(int)pi,(int)page,pn,filename);
-			}
-			++pi;
-		}
-		else
-		{
-			if(vl)printf("SKIPPING NON MATCHING [%d/%d] %s in %s\n",(int)pi,(int)page,pn,filename);
-			//archive_read_data_skip(a);
-		}
-	}
-ena:
-	archive_read_close(a);
-	archive_read_free(a);
-noa:	1;
-    }
-#endif /* FIM_WITH_ARCHIVE */
-    //size_t read_offset=cc.getIntVariable("g:" FIM_VID_OPEN_OFFSET);
+    //size_t read_offset=cc.getIntVariable("g:"FIM_VID_OPEN_OFFSET);
+    size_t read_offset=0;
     read_offset=cc.getIntVariable(FIM_VID_OPEN_OFFSET);/* warning : user could supply negative values */
-    read_offset_u = read_offset + cc.getIntVariable(FIM_VID_OPEN_OFFSET_RETRY);/* warning : this can lead to negative values */
-    read_offset_u = FIM_MAX(read_offset,read_offset_u);
-with_offset:
-    if(read_offset>0)
-	    fim_fseek(fp,read_offset,SEEK_SET);
+
+    if(read_offset>0)fseek(fp,read_offset,SEEK_SET);// NEW
+
 #ifdef FIM_WANT_SEEK_MAGIC
 	/* FIXME : EXPERIMENTAL */
 	string sm;
-   	sm = cc.getStringVariable(FIM_VID_SEEK_MAGIC);
+   	sm=cc.getStringVariable(FIM_VID_SEEK_MAGIC);
 	/*
-		the user should be able to specify a magic string like:
+		the user should specify a magix string like:
 		sm="\xFF\xD8\xFF\xE0";
 	*/
-   	if(sm!=FIM_CNS_EMPTY_STRING)
+   	if(sm!="")
 	{
-		read_offset = find_regexp_offset(fp, sm.c_str() , read_offset);
-		if(read_offset>0)
-		{
-			fim_fseek(fp,read_offset,SEEK_SET);
-		}
-		cc.setVariable(FIM_VID_OPEN_OFFSET ,(fim_int)read_offset);
+		read_offset=find_regexp_offset(fp, sm.c_str() , read_offset);
+		if(read_offset>0)fseek(fp,read_offset,SEEK_SET);// NEW
+		cc.setVariable(FIM_VID_OPEN_OFFSET ,(int)read_offset);
 	}
-#endif /* FIM_WANT_SEEK_MAGIC */
-    fim_bzero(blk,sizeof(blk));
-    if((fr=fim_fread(blk,1,sizeof(blk),fp))<0)
+#endif
+
+    memset(blk,0,sizeof(blk));
+    if((fr=fread(blk,1,sizeof(blk),fp))<0)
     {
       /* should we care about the error code ? */
       return NULL;	/* new */
     }
-    fim_rewind(fp);
-    if(read_offset>0)
-	    fim_fseek(fp,read_offset,SEEK_SET);
+    rewind(fp);
+    if(read_offset>0)fseek(fp,read_offset,SEEK_SET);// NEW
 
-#if FIM_WITH_UFRAW
-    if (NULL == loader && filename && is_file_nonempty(filename) ) /* FIXME: this is a hack */
-    if(regexp_match(filename,".*NEF$") || regexp_match(filename,".*nef$"))
+    if(cc.getIntVariable(FIM_VID_BINARY_DISPLAY)!=0)
     {
-	loader = &nef_loader;
-        goto found_a_loader;
-    }
-#endif /* FIM_WITH_UFRAW */
-
-#if FIM_ALLOW_LOADER_STRING_SPECIFICATION
-    {
-    fim::string ls=cc.getStringVariable(FIM_VID_FILE_LOADER);
-    want_retry=(cc.getIntVariable(FIM_VID_RETRY_LOADER_PROBE));
-    if(ls!=FIM_CNS_EMPTY_STRING)
-    if(NULL==loader)/* we could have forced one */
-    {
-    if(vl)FIM_VERB_PRINTF("using user specified loader string: %s\n",ls.c_str());
-    list_for_each(item,&loaders) {
-        loader = list_entry(item, struct ida_loader, list);
-    	if(vl)FIM_VERB_PRINTF("loader %s\n",loader->name);
-	if (!strcmp(loader->name,ls.c_str()))
-		goto found_a_loader;
-    }
-    	if(vl)FIM_VERB_PRINTF("user specified loader string: %s is invalid!\n",ls.c_str());
-    }
-		loader = NULL;
-    }
-#endif /* FIM_ALLOW_LOADER_STRING_SPECIFICATION */
-
-#if FIM_WANT_TEXT_RENDERING
-    {
-    	fim_int bd=cc.getIntVariable(FIM_VID_TEXT_DISPLAY);
-    	if(bd==1)
-	{
-		loader = &text_loader;
-		goto found_a_loader;
-	}
-    }
-#endif
-#if FIM_WANT_RAW_BITS_RENDERING
-    {
-    fim_int bd=cc.getIntVariable(FIM_VID_BINARY_DISPLAY);
-    if(bd!=0)
-    {
-    	if(bd==1)
+        /* a funny feature */
+    	if(cc.getIntVariable(FIM_VID_BINARY_DISPLAY)==1)
 		loader = &bit1_loader;
 	else
-	{
-    		if(bd==24)
-			loader = &bit24_loader;
-		else
-			;// FIXME: need some error reporting
-	}
+		loader = &bit24_loader;
     }
-    }
-#endif /* FIM_WANT_RAW_BITS_RENDERING */
-probe_loader:
     /* pick loader */
 #ifdef FIM_SKIP_KNOWN_FILETYPES
-    if (NULL == loader && (*blk==0x42) && (*(fim_byte_t*)(blk+1)==0x5a))
+    if (NULL == loader && (*blk==0x42) && (*(unsigned char*)(blk+1)==0x5a))
     {
 	cc.set_status_bar("skipping 'bz2'...", "*");
-	goto shall_skip_header;
+	return NULL;
     }
 /* gz is another ! */
-/*    if (NULL == loader && (*blk==0x30) && (*(fim_byte_t*)(blk+1)==0x30))
+/*    if (NULL == loader && (*blk==0x30) && (*(unsigned char*)(blk+1)==0x30))
     {
 	cc.set_status_bar("skipping 'gz'...", "*");
 	return NULL;
     }*/
 #ifndef HAVE_LIBPOPPLER
-    if (NULL == loader && (*blk==0x25) && (*(fim_byte_t*)(blk+1)==0x50 )
-     && NULL == loader && (*(fim_byte_t*)(blk+2)==0x44) && (*(fim_byte_t*)(blk+3)==0x46))
+    if (NULL == loader && (*blk==0x25) && (*(unsigned char*)(blk+1)==0x50 )
+     && NULL == loader && (*(unsigned char*)(blk+2)==0x44) && (*(unsigned char*)(blk+3)==0x46))
     {
 	cc.set_status_bar("skipping 'pdf' (use fimgs for this)...", "*");
-	goto shall_skip_header;
+	return NULL;
     }
-#endif /* HAVE_LIBPOPPLER */
+#endif
 #ifndef HAVE_LIBSPECTRE
-    if (NULL == loader && (*blk==0x25) && (*(fim_byte_t*)(blk+1)==0x21 )
-     && NULL == loader && (*(fim_byte_t*)(blk+2)==0x50) && (*(fim_byte_t*)(blk+3)==0x53))
+    if (NULL == loader && (*blk==0x25) && (*(unsigned char*)(blk+1)==0x21 )
+     && NULL == loader && (*(unsigned char*)(blk+2)==0x50) && (*(unsigned char*)(blk+3)==0x53))
     {
 	cc.set_status_bar("skipping 'ps' (use fimgs for this)...", "*");
-	goto shall_skip_header;
+	return NULL;
     }
-#endif /* HAVE_LIBSPECTRE */
-#endif /* FIM_SKIP_KNOWN_FILETYPES */ 
-    /* TODO: should sort loaders by mlen, descendingly */
+#endif
+#endif
     if(NULL==loader)/* we could have forced one */
-    list_for_each(item,&loaders)
-    {
+    list_for_each(item,&loaders) {
         loader = list_entry(item, struct ida_loader, list);
-    	if(loader->mlen < 1)
-	    continue;
 	if (NULL == loader->magic)
 	    break;
 	if (0 == memcmp(blk+loader->moff,loader->magic,loader->mlen))
 	    break;
 	loader = NULL;
     }
-    if(loader!=NULL)
-    {
-    		if(vl)FIM_VERB_PRINTF("found loader %s by magic number\n",loader->name);
-		goto found_a_loader;
-    }
-
-#if !FIM_HAVE_FULL_PROBING_LOADER
-#ifdef HAVE_LIBGRAPHICSMAGICK
-    /* FIXME: with this scheme, this is the only 0-mlen loader allowed */
-    if (NULL == loader
-#if 1
-		    && filename && is_file_nonempty(filename) /* FIXME: need an appropriate error/warning printout in this case */
-#endif /* */
-		    )
-	loader = &magick_loader;
-    else
-	;
-#endif /* HAVE_LIBGRAPHICSMAGICK */
-#else /* FIM_HAVE_FULL_PROBING_LOADER */
-    /* Incomplete: the problem is related to the descriptor: after the first probe, 
-     * the file descriptor may not be available anymore, in case of standard input,
-     * unless some more advanced solution is found.
-     * */
-    if(NULL==loader)
-    if(rozlsl)
-    list_for_each(item,&loaders)
-    {
-        loader = list_entry(item, struct ida_loader, list);
-    	if(loader->mlen > 0)
-	    continue;
-	loader = NULL;
-    }
-#endif /* FIM_HAVE_FULL_PROBING_LOADER */
-
-    if((loader==NULL) && (cc.getIntVariable(FIM_VID_NO_EXTERNAL_LOADERS)==1))
-		goto head_not_found;
-
+     
 #ifdef FIM_WITH_LIBPNG 
 #ifdef FIM_TRY_DIA
-    if (NULL == loader && (*blk==0x1f) && (*(fim_byte_t*)(blk+1)==0x8b))// i am not sure if this is the FULL signature!
+    if (NULL == loader && (*blk==0x1f) && (*(unsigned char*)(blk+1)==0x8b))// i am not sure if this is the FULL signature!
     {
-	cc.set_status_bar(FIM_MSG_WAIT_PIPING" '" FIM_EPR_DIA "'...", "*");
+	cc.set_status_bar("please wait while piping through 'dia'...", "*");
     	/*
 	 * dez's
 	 * */
 	/* a gimp xcf file was found, and we try to use xcftopnm */
-	cc.set_status_bar(FIM_MSG_WAIT_PIPING" '" FIM_EPR_DIA "'...", "*");
-	if(NULL!=(fp=fim_execlp(FIM_EPR_DIA,FIM_EPR_DIA,filename,"-e",FIM_TMP_FILENAME ".png",NULL))&& 0==fim_fclose (fp))
+	cc.set_status_bar("please wait while piping through 'dia'...", "*");
+	if(NULL!=(fp=fim_execlp("dia","dia",filename,"-e",FIM_TMP_FILENAME".png",NULL))&& 0==fclose (fp))
 	{
-		if (NULL == (fp = fim_fopen(FIM_TMP_FILENAME".png","r")))
+		if (NULL == (fp = fopen(FIM_TMP_FILENAME".png","r")))
 		/* this could happen in case dia was removed from the system */
-			goto shall_skip_header;
+			return NULL;
 		else
 		{
 			unlink(FIM_TMP_FILENAME".png");
@@ -1974,34 +1566,34 @@ probe_loader:
 		}
    	}
    }
-#endif /* FIM_TRY_DIA */
-#endif /* FIM_WITH_LIBPNG  */
+#endif
+#endif
 #ifdef FIM_TRY_XFIG
     if (NULL == loader && (0 == memcmp(blk,"#FIG",4)))
     {
-	cc.set_status_bar(FIM_MSG_WAIT_PIPING" '" FIM_EPR_FIG2DEV "'...", "*");
+	cc.set_status_bar("please wait while piping through 'fig2dev'...", "*");
     	/*
 	 * dez's
 	 * */
 	/* a xfig file was found, and we try to use fig2dev */
-	if(NULL==(fp=fim_execlp(FIM_EPR_FIG2DEV,FIM_EPR_FIG2DEV,"-L","ppm",filename,NULL)))
-		goto shall_skip_header;
+	if(NULL==(fp=fim_execlp("fig2dev","fig2dev","-L","ppm",filename,NULL)))
+	    return NULL;
 	loader = &ppm_loader;
     }
-#endif /* FIM_TRY_XFIG */
+#endif
 #ifdef FIM_TRY_XCFTOPNM
     if (NULL == loader && (0 == memcmp(blk,"gimp xcf file",13)))
     {
-	cc.set_status_bar(FIM_MSG_WAIT_PIPING" '" FIM_EPR_XCFTOPNM "'...", "*");
+	cc.set_status_bar("please wait while piping through 'xcftopnm'...", "*");
     	/*
 	 * dez's
 	 * */
 	/* a gimp xcf file was found, and we try to use xcftopnm */
-	if(NULL==(fp=fim_execlp(FIM_EPR_XCFTOPNM,FIM_EPR_XCFTOPNM,filename,NULL)))
-		goto shall_skip_header;
+	if(NULL==(fp=fim_execlp("xcftopnm","xcftopnm",filename,NULL)))
+	    return NULL;
 	loader = &ppm_loader;
     }
-#endif /* FIM_TRY_XCFTOPNM */
+#endif
 //#if 0
 #ifdef FIM_TRY_INKSCAPE
 #ifdef FIM_WITH_LIBPNG 
@@ -2014,12 +1606,12 @@ probe_loader:
 	/* an svg file was found, and we try to use inkscape with it
 	 * note that braindamaged inkscape doesn't export to stdout ...
 	 * */
-	cc.set_status_bar(FIM_MSG_WAIT_PIPING" '" FIM_EPR_INKSCAPE "'...", "*");
-	sprintf(command,FIM_EPR_INKSCAPE" \"%s\" --export-png \"%s\"",
+	cc.set_status_bar("please wait while piping through 'inkscape'...", "*");
+	sprintf(command,"inkscape \"%s\" --export-png \"%s\"",
 		filename,FIM_TMP_FILENAME );
 #if 0
 	/* FIXME : the following code should work, but it doesn't */
-	if(NULL!=(fp=fim_execlp(FIM_EPR_INKSCAPE,FIM_EPR_INKSCAPE,filename,"--export-png","/dev/stdout",NULL)))
+	if(NULL!=(fp=fim_execlp("inkscape","inkscape",filename,"--export-png","/dev/stdout",NULL)))
 	{
 		fp=fim_fread_tmpfile(fp);
 		if(fp==NULL) return NULL;
@@ -2029,10 +1621,10 @@ probe_loader:
 		}
 	}
 #else
-	if(NULL!=(fp=fim_execlp(FIM_EPR_INKSCAPE,FIM_EPR_INKSCAPE,filename,"--export-png",FIM_TMP_FILENAME,NULL))&&0==fim_fclose(fp))
+	if(NULL!=(fp=fim_execlp("inkscape","inkscape",filename,"--export-png",FIM_TMP_FILENAME,NULL))&&0==fclose(fp))
 	{
-		if (NULL == (fp = fim_fopen(FIM_TMP_FILENAME,"r")))
-			goto shall_skip_header;
+		if (NULL == (fp = fopen(FIM_TMP_FILENAME,"r")))
+			    return NULL;
 		else
 		{
 			unlink(FIM_TMP_FILENAME);
@@ -2040,8 +1632,8 @@ probe_loader:
 		}
 	}
     }
-#endif /* FIM_WITH_LIBPNG  */
-#endif /* FIM_TRY_INKSCAPE */
+#endif
+#endif
 #if 0
 /*
  * Warning : this is potentially dangerous and so we wait a little before working on this.
@@ -2057,68 +1649,54 @@ probe_loader:
 	return NULL;
     }
 #endif
-#endif /* FIM_HAVE_FULL_PROBING_LOADER */
+#endif
 //#endif
 #ifdef FIM_TRY_CONVERT
     if (NULL == loader) {
-	cc.set_status_bar(FIM_MSG_WAIT_PIPING" through '" FIM_EPR_CONVERT "'...", "*");
+	cc.set_status_bar(string("please wait while piping ")+string(filename)+string(" through 'convert'..."), "*");
 	/* no loader found, try to use ImageMagick's convert */
-	if(NULL==(fp=fim_execlp(FIM_EPR_CONVERT,FIM_EPR_CONVERT,filename,"ppm:-",NULL)))
-		goto shall_skip_header;
+	if(NULL==(fp=fim_execlp("convert","convert",filename,"ppm:-",NULL)))
+		return NULL;
 	loader = &ppm_loader;
     }
-#endif /* FIM_TRY_CONVERT */
-    if (NULL == loader)
-	    goto head_not_found;
+#endif
+    /*
+     * no appropriate loader found for this image
+     * */
+    if (NULL == loader) return NULL;
 
-found_a_loader:	/* we have a loader */
-
-    if(vl)FIM_VERB_PRINTF("using loader %s\n",loader->name);
     /* load image */
-    img = (struct ida_image*)fim_calloc(1,sizeof(*img));/* calloc, not malloc: we want zeros */
+    img = (struct ida_image*)fim_calloc(sizeof(*img),1);/* calloc, not malloc: we want zeros */
     if(!img)goto errl;
-
+    memset(img,0,sizeof(*img));
 #ifdef FIM_EXPERIMENTAL_ROTATION
     /* 
      * warning : there is a new field in ida_image_info (fim_extra_flags) 
      * which gets cleared to 0 (default) in this way.
      * */
-#endif /* FIM_EXPERIMENTAL_ROTATION */
-    // cc.set_status_bar("loading...", "*");
-#if FIM_EXPERIMEMTAL_IMG_NMSPC
-	img->i.nsp = nsp;
-#endif /* FIM_EXPERIMEMTAL_IMG_NMSPC */
+#endif
     data = loader->init(fp,filename,page,&img->i,0);
 #ifdef FIM_READ_STDIN_IMAGE
     if(strcmp(filename,FIM_STDIN_IMAGE_NAME)==0) { close(0); if(dup(2)){/* FIXME : should we report this ?*/}/* if the image is loaded from stdin, we close its stream */}
-#endif /* FIM_READ_STDIN_IMAGE */
+#endif
     if (NULL == data) {
-	if(vl)FIM_VERB_PRINTF("loader failed\n");
-	if(cc.displaydevice_->debug_)
+	if(cc.displaydevice->debug)
 		FIM_FBI_PRINTF("loading %s [%s] FAILED\n",filename,loader->name);
 	free_image(img);
-	img=NULL;
-	if(want_retry)
-	{
-		want_retry=0;
-		loader=NULL;
-    		if(vl)FIM_VERB_PRINTF("retrying with probing..\n");
-		goto probe_loader;
-	}
-	goto shall_skip_header;
+	return NULL;
     }
-    img->data = (fim_byte_t*)fim_pm_alloc(img->i.width, img->i.height);
+    img->data = (unsigned char*)fim_malloc(img->i.width * img->i.height * 3);
     if(!img->data)goto errl;
 #ifndef FIM_IS_SLOWER_THAN_FBI
     for (y = 0; y < img->i.height; y++) {
 	loader->read(img->data + img->i.width * 3 * y, y, data);
     }
-#else /* FIM_IS_SLOWER_THAN_FBI */
+#else
     for (y = 0; y < img->i.height; y++) {
-	cc.displaydevice_->switch_if_needed();
+	cc.displaydevice->switch_if_needed();
 	loader->read(img->data + img->i.width * 3 * y, y, data);
     }
-#endif /* FIM_IS_SLOWER_THAN_FBI */
+#endif
 
 #ifndef FIM_IS_SLOWER_THAN_FBI
     /*
@@ -2126,47 +1704,25 @@ found_a_loader:	/* we have a loader */
      * be dumped to the video memory, resulting in much faster image
      * drawing in fim than in fbi !
      * */
-	rgb2bgr(img->data,img->i.width,y); 
-#endif /* FIM_IS_SLOWER_THAN_FBI */
+    {
+	register char t;
+	register char	*p=(char*) img->data,
+		 	*pm=(char*)p+img->i.width*3*y;
+	while(p<pm)
+	{
+            t=*p;
+            *p=p[2];
+            p[2]=t;
+	    p+=3;
+	}
+    }
+#endif
     loader->done(data);
-#if FIM_WITH_ARCHIVE
-    if(npages)
-	    img->i.npages = npages; /* FIXME: temporarily here */
-#endif /* FIM_WITH_ARCHIVE */
-#if FIM_WANT_REMEMBER_LAST_FILE_LOADER
-    if(img && loader)
-    {
-	if(nsp)
-		nsp->setVariable(FIM_VID_FILE_LOADER,loader->name);
-	cc.setVariable(FIM_VID_LAST_FILE_LOADER,loader->name);
-    }
-#endif /* FIM_WANT_REMEMBER_LAST_FILE_LOADER */
-#if FIM_WANT_EXPERIMENTAL_PLUGINS
-    	if(img)
-		fim_post_read_plugins_exec(img,filename);
-#endif /* FIM_WANT_EXPERIMENTAL_PLUGINS */
-    goto ret;
-
-shall_skip_header:
-head_not_found: /* no appropriate loader found for this image */
-    img=NULL;
-    if( read_offset_u > read_offset )
-    {
-	    read_offset++;
-	    //std::cout << "will retry with offset "<< read_offset  <<" :)\n" ;
-	    goto with_offset;
-    }
+    return img;
 errl:
     if(img && img->data)fim_free(img->data);
     if(img )fim_free(img);
-#if FIM_SHALL_BUFFER_STDIN
-    if(sbuf)fim_free(sbuf);
-#endif /* FIM_SHALL_BUFFER_STDIN */
-ret:
-    if( read_offset > 0 && nsp )
-	    nsp->setVariable(FIM_VID_OPEN_OFFSET,(fim_int)read_offset); /* FIXME */
-    FIM_PR('.');
-    return img;
+    return NULL;
 }
 
 /*all dez's
@@ -2176,7 +1732,6 @@ ret:
 struct ida_image*
 FbiStuff::rotate_image90(struct ida_image *src, unsigned int rotation)
 {
-    /* 0: CCW, 1: CW */
     struct op_resize_parm p;
     struct ida_rect  rect;
     struct ida_image *dest;
@@ -2185,10 +1740,10 @@ FbiStuff::rotate_image90(struct ida_image *src, unsigned int rotation)
     struct ida_op *desc_p;
 
     dest =(ida_image*) fim_malloc(sizeof(*dest));
-    /* dez: */ if(!dest)goto err;
-    fim_bzero(dest,sizeof(*dest));
-    fim_bzero(&rect,sizeof(rect));
-    fim_bzero(&p,sizeof(p));
+    /* dez: */ if(!dest)return NULL;
+    memset(dest,0,sizeof(*dest));
+    memset(&rect,0,sizeof(rect));
+    memset(&p,0,sizeof(p));
     
     p.width  = src->i.width;
     p.height = src->i.height;
@@ -2203,16 +1758,15 @@ FbiStuff::rotate_image90(struct ida_image *src, unsigned int rotation)
     else	   {desc_p=&desc_rotate_cw ;}
 
     data = desc_p->init(src,&rect,&dest->i,&p);
-    dest->data = (fim_byte_t*)fim_pm_alloc(dest->i.width, dest->i.height);
-    /* dez: */ if(!(dest->data)){fim_free(dest);dest=NULL;goto err;}
+    dest->data = (unsigned char*)fim_malloc(dest->i.width * dest->i.height * 3);
+    /* dez: */ if(!(dest->data)){fim_free(dest);return NULL;}
     for (y = 0; y < dest->i.height; y++) {
-	cc.displaydevice_->switch_if_needed();
+	cc.displaydevice->switch_if_needed();
 	desc_p->work(src,&rect,
 			 dest->data + 3 * dest->i.width * y,
 			 y, data);
     }
     desc_p->done(data);
-err:
     return dest;
 }
 
@@ -2232,10 +1786,10 @@ FbiStuff::rotate_image(struct ida_image *src, float angle)
     unsigned int y;
 
     dest = (ida_image*)fim_malloc(sizeof(*dest));
-    /* dez: */ if(!dest)goto err;
-    fim_bzero(dest,sizeof(*dest));
-    fim_bzero(&rect,sizeof(rect));
-    fim_bzero(&p,sizeof(p));
+    /* dez: */ if(!dest)return NULL;
+    memset(dest,0,sizeof(*dest));
+    memset(&rect,0,sizeof(rect));
+    memset(&p,0,sizeof(p));
 
     /* source rectangle */
     rect.x1=0;
@@ -2258,7 +1812,7 @@ FbiStuff::rotate_image(struct ida_image *src, float angle)
     int w_extra  = (diagonal - src->i.width      )/2;
     int e_extra  = (diagonal - src->i.width - w_extra  );
     /* we allocate a new, larger canvas */
-    fim_byte_t * larger_data = (fim_byte_t*)fim_calloc(diagonal * diagonal * 3,1);
+    unsigned char * larger_data = (unsigned char*)fim_calloc(diagonal * diagonal * 3,1);
     if(larger_data)
     {
 	    for(y = n_extra; y < (unsigned int) diagonal - s_extra; ++y )
@@ -2279,14 +1833,14 @@ FbiStuff::rotate_image(struct ida_image *src, float angle)
     else
     	cc.set_status_bar( "rescaling failed (insufficient memory?!)", "*");
     }
-#endif /* FIM_EXPERIMENTAL_ROTATION */
+#endif
 
     p.angle    = (int) angle;
     data = desc_rotate.init(src,&rect,&dest->i,&p);
-    dest->data = (fim_byte_t*)fim_pm_alloc(dest->i.width, dest->i.height, true);
-    /* dez: */ if(!(dest->data)){fim_free(dest);dest=NULL;goto err;}
+    dest->data = (unsigned char*)fim_calloc(dest->i.width * dest->i.height * 3,1);
+    /* dez: */ if(!(dest->data)){fim_free(dest);return NULL;}
     for (y = 0; y < dest->i.height; y++) {
-	cc.displaydevice_->switch_if_needed();
+	cc.displaydevice->switch_if_needed();
 	desc_rotate.work(src,&rect,
 			 dest->data + 3 * dest->i.width * y,
 			 y, data);
@@ -2298,39 +1852,27 @@ FbiStuff::rotate_image(struct ida_image *src, float angle)
 
     //std::cout << "diagonal     : " << diagonal << "\n";
    // std::cout << "src->i.width : " << src->i.width << "\n";
-err:
+
     return dest;
 }
 
 
-#define FIM_OPTIMIZATION_20120129 1
-
 struct ida_image*	
-FbiStuff::scale_image(const struct ida_image *src, /*const fim_mipmap_t *mmp,*/ float scale, float ascale
-#if FIM_WANT_EXPERIMENTAL_MIPMAPS
-		, const fim_mipmap_t * mmp
-#endif /* FIM_WANT_EXPERIMENTAL_MIPMAPS */
-		)
+FbiStuff::scale_image(struct ida_image *src, float scale, float ascale)
 {
     struct op_resize_parm p;
     struct ida_rect  rect;
-    struct ida_image *dest=NULL;
-    void *data=NULL;
+    struct ida_image *dest;
+    void *data;
     unsigned int y;
-#if FIM_WANT_EXPERIMENTAL_MIPMAPS
-    int mmi=-1;
-    struct ida_image msrc;
-#endif /* FIM_WANT_EXPERIMENTAL_MIPMAPS */
-    /* dez: */ if(ascale<=0.0||ascale>=100.0)
-	    ascale=1.0;
+    /* dez: */ if(ascale<=0.0||ascale>=100.0)ascale=1.0;
 
     dest = (ida_image*)fim_malloc(sizeof(*dest));
-    /* dez: */ if(!dest)
-	    goto err;
-    fim_bzero(dest,sizeof(*dest));
-    fim_bzero(&rect,sizeof(rect));
-    fim_bzero(&p,sizeof(p));
- 
+    /* dez: */ if(!dest)return NULL;
+    memset(dest,0,sizeof(*dest));
+    memset(&rect,0,sizeof(rect));
+    memset(&p,0,sizeof(p));
+    
 //    p.width  = (int)(src->i.width  * scale * ascale);
 //    p.height = (int)(src->i.height * scale);
     // ceil() : new
@@ -2341,106 +1883,48 @@ FbiStuff::scale_image(const struct ida_image *src, /*const fim_mipmap_t *mmp,*/ 
 	p.width = 1;
     if (0 == p.height)
 	p.height = 1;
-   
-#if FIM_WANT_EXPERIMENTAL_MIPMAPS
-    if(mmp && ascale == 1.0 && scale < 1.0)
-    {
-	msrc=*src;
-
-	for(mmi=0;mmi<mmp->nmm && mmp->mmw[mmi]>=p.width && mmp->mmh[mmi]>=p.height ;++mmi)
-	{
-		msrc.i.width  = mmp->mmw[mmi];
-		msrc.i.height = mmp->mmh[mmi];
-		msrc.data     = mmp->mdp + mmp->mmoffs[mmi];
-	}
-	if(mmi>0)
-	{
-		src=&msrc;
-		mmi--;
-		if(FIM_WVMM) std::cout << "for scale " << scale << std::endl;
-		if(FIM_WVMM) std::cout << "using mipmap " << mmi << " / " << mmp->nmm << std::endl;
-		if(FIM_WVMM) std::cout << mmp->mmw[mmi] << " x " << mmp->mmh[mmi] << "" << std::endl;
-		if(FIM_WVMM) std::cout << p.width << " x " << p.height << " -> " << std::endl;
-	}
-	else
-	{
-		if(FIM_WVMM) std::cout << "for scale " << scale << std::endl;
-		if(FIM_WVMM) std::cout << "not using mipmap " << std::endl;
-	}
-    }
-#endif /* FIM_WANT_EXPERIMENTAL_MIPMAPS */
-
     data = desc_resize.init(src,&rect,&dest->i,&p);
-    if(data==NULL)
-    {
-	fim_free(dest);
-    	goto err;
-    }
-    dest->data = (fim_byte_t*)fim_pm_alloc(dest->i.width, dest->i.height);
-    if(!(dest->data))
-    {
-	    fim_free(data);
-	    fim_free(dest);
-	    goto err;
-    }
-
-#if FIM_WANT_EXPERIMENTAL_MIPMAPS
-    if(mmi>0 && msrc.i.width == dest->i.width && msrc.i.height == dest->i.height )
-    {
-	memcpy(dest->data,src->data,3 * dest->i.width * dest->i.height); /* a special case */
-	goto done;
-    }
-#endif /* FIM_WANT_EXPERIMENTAL_MIPMAPS */
-
-#if FIM_OPTIMIZATION_20120129
-    if(ascale==scale && ascale==1.0)
-	    memcpy(dest->data,src->data,3 * dest->i.width * dest->i.height); /* a special case */
-    else
-#endif /* FIM_OPTIMIZATION_20120129 */
+    dest->data = (unsigned char*)fim_malloc(dest->i.width * dest->i.height * 3);
+    /* dez: */ if(!(dest->data)){fim_free(dest);return NULL;}
     for (y = 0; y < dest->i.height; y++) {
-	cc.displaydevice_->switch_if_needed();
+	cc.displaydevice->switch_if_needed();
 	desc_resize.work(src,&rect,
 			 dest->data + 3 * dest->i.width * y,
 			 y, data);
     }
-done:
     desc_resize.done(data);
-err:
+
     return dest;
 }
 
-struct ida_image * fbi_image_clone(const struct ida_image *img)
+struct ida_image * fbi_image_clone(struct ida_image *img)
 {
 	/* note that to fulfill free_image(), the descriptor and data couldn't be allocated together
 	 * */
+	if(!img || !img->data)return NULL;
 	struct ida_image *nimg=NULL;
-
-	if(!img || !img->data)
-		goto err;
 	int n;
-	if(!(nimg=(ida_image*)fim_calloc(1,sizeof(struct ida_image))))
-		goto err;
-
+	if(!(nimg=(ida_image*)fim_calloc(1,sizeof(struct ida_image))))return NULL;
 	memcpy(nimg,img,sizeof(struct ida_image));
 	/*note .. no checks .. :P */
 	n = img->i.width * img->i.height * 3;
 	
-	nimg->data = (fim_byte_t*)fim_malloc( n );
+	nimg->data = (unsigned char*)fim_malloc( n );
 	if(!(nimg->data))
 	{
 		fim_free(nimg);
-		nimg = NULL;
-		goto err;
+		return NULL;
 	}
 	memcpy(nimg->data, img->data,n);
-err:
 	return nimg;
 }
 
-	int FbiStuff::fim_filereading_debug(void)
+
+	int FbiStuff::fim_filereading_debug()
 	{
-		return cc.displaydevice_ ?
-			cc.displaydevice_->debug_:
+		return cc.displaydevice ?
+			cc.displaydevice->debug:
 			0;
 	}
+
 }

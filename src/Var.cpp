@@ -1,8 +1,8 @@
-/* $LastChangedDate: 2013-11-06 18:43:59 +0100 (Wed, 06 Nov 2013) $ */
+/* $Id: Var.cpp 245 2009-04-28 21:28:38Z dezperado $ */
 /*
  Var.cpp : 
 
- (c) 2007-2013 Michele Martone
+ (c) 2007-2009 Michele Martone
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -24,7 +24,7 @@ namespace fim
 	typedef std::map<fim::string, fim::string> fim_var_help_t;//variable id -> variable help
 	static fim_var_help_t fim_var_help_db;	/* this is the global help db for fim variables */
 
-	void fim_var_help_db_init(void)
+	void Var::var_help_db_init()
 	{
 		/* The inclusion of the next file is not essential : it serves only to populate the variables help database. */
 		#define FIM_WANT_INLINE_HELP 1
@@ -33,49 +33,27 @@ namespace fim
 		;/* freebsd 7.2 cc dies without */
 	}
 
-	fim::string fim_var_help_db_query(const fim::string &id)
+	fim::string Var::var_help_db_query(const fim::string &id)
 	{
 		string hs = fim_var_help_db[id];
-		if(hs==FIM_CNS_EMPTY_STRING)
+		if(hs=="")
 			return "the help system for variables is still incomplete";
 		else
 			return hs;
 	}
 
-	fim::string fim_get_variables_reference(FimDocRefMode refmode)
+	fim::string Var::get_variables_reference()
 	{
-		string s =FIM_CNS_EMPTY_STRING;
+		string s ="";
+		
 		fim_var_help_t::const_iterator vi;
-		if(refmode==Man)
-			goto manmode;
 		for( vi=fim_var_help_db.begin();vi!=fim_var_help_db.end();++vi)
 		{
 			s+=vi->first;
 			s+=" : ";
-			s+=fim_var_help_db_query(vi->first);
+			s+=Var::var_help_db_query(vi->first);
 			s+="\n";
 		}
 		return s;
-manmode:
-		for( vi=fim_var_help_db.begin();vi!=fim_var_help_db.end();++vi)
-		{
-			s+=".B\n";
-			s+=vi->first;
-			s+="\n";
-			s+=fim_var_help_db_query(vi->first);
-			s+="\n";
-			s+=".fi\n";
-		}
-		return s;
-	}
-
-	std::ostream& Var::print(std::ostream &os)const
-	{
-		return os << this->getString();
-	}
-
-	std::ostream& operator<<(std::ostream &os, const Var & var)
-	{
-		return var.print(os);
 	}
 }

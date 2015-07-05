@@ -1,8 +1,8 @@
-/* $LastChangedDate: 2015-02-13 00:24:59 +0100 (Fri, 13 Feb 2015) $ */
+/* $Id: interpreter.cpp 230 2009-03-29 13:48:32Z dezperado $ */
 /*
  interpreter.cpp : Fim language interpreter
 
- (c) 2007-2015 Michele Martone
+ (c) 2007-2009 Michele Martone
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -46,7 +46,7 @@ namespace fim
  */
 std::ostream & operator<<(std::ostream &os,const nodeType &p)
 {
-	os<< "type " << p.type << FIM_SYM_ENDL;
+	os<< "type " << p.type << "\n";
 	return os;
 }
 
@@ -60,9 +60,9 @@ Var cvar(nodeType *p)
 	nodeType *np=p;
   	fim::string arg;
 	int i;
-	if(p->type == typeOpr && p->opr.oper==FIM_SYM_STRING_CONCAT)
+	if(p->type == typeOpr && p->opr.oper=='.' )
 	{
-		DBG(".:"<<FIM_SYM_ENDL);
+		DBG(".:"<<"\n");
 	for(i=0;i<p->opr.nops;++i)
 	{
 		np=(p->opr.op[i]);
@@ -73,7 +73,7 @@ Var cvar(nodeType *p)
 	else
 	if(p->type == typeOpr && p->opr.oper=='a' )
 	{
-		DBG("a:"<<FIM_SYM_ENDL);
+		DBG("a:"<<"\n");
 	for(i=0;i<p->opr.nops;++i)
 	{
 		//warning : only 1 should be allowed here..
@@ -85,14 +85,14 @@ Var cvar(nodeType *p)
 	else
 	if(p->type == stringCon )
 	{
-		DBG("stringCon:"<<FIM_SYM_ENDL);
+		DBG("stringCon:"<<"\n");
 		arg=(p->scon.s);
 		return arg;//NEW 20080221
 	}
 	else
 	if(p->type == vId )
 	{	
-		DBG("cvId:"<<FIM_SYM_ENDL);
+		DBG("cvId:"<<"\n");
 #if 0
 		if(0 && p->scon.s && 0==strcmp(p->scon.s,"random"))
 		{
@@ -106,12 +106,12 @@ Var cvar(nodeType *p)
 	else if(p->type == intCon )
 	{
 		/* FIXME : int cast is due to some sick inner conversion */
-		DBG("cvar:intCon:"<<p->con.value<<FIM_SYM_ENDL);
-		return Var((fim_int)(p->con.value));
+		DBG("cvar:intCon:"<<p->con.value<<"\n");
+		return Var((int)(p->con.value));
 	}
 	else if(p->type == floatCon)
 	{
-		DBG("cvar:floatCon:"<<p->fid.f<<FIM_SYM_ENDL);
+		DBG("cvar:floatCon:"<<p->fid.f<<"\n");
 		return p->fid.f;
 	}
 	else
@@ -154,12 +154,12 @@ std::vector<fim::string> var(nodeType *p)
 		//return args;
 	}
 	else
-	if(p->type == typeOpr && np->opr.oper==FIM_SYM_STRING_CONCAT)
+	if(p->type == typeOpr && np->opr.oper=='.' )
 	for(i=0;i<p->opr.nops;++i)
 	{
 		DBG("'i'args:"<<i<<"/"<<p->opr.nops<<":\n");
 		np=(p->opr.op[i]);
-		if(np->type == typeOpr && np->opr.oper==FIM_SYM_STRING_CONCAT)
+		if(np->type == typeOpr && np->opr.oper=='.' )
 		{
 		  	std::vector<fim::string> vargs=var(np);
 			for(size_t j=0;j<vargs.size();++j) args.push_back(vargs[j]);
@@ -177,22 +177,21 @@ std::vector<fim::string> var(nodeType *p)
 using namespace fim;
 Var ex(nodeType *p)
 {
-	fim_int iValue;
+	int iValue;
 	float fValue;
-	fim_char_t *s=NULL;
+	char *s;
 
   	std::vector<fim::string> args;
 	int typeHint;
-	if (!p)
-		return (fim_int)0;
+	if (!p) return 0;
 	switch(p->type)
 	{
 		case intCon:
 			/* FIXME : are we sure this case executes ? */
 			DBG("intCon:\n");
-			return (fim_int)p->con.value;
+			return (int)p->con.value;
 	        case floatCon:
-			DBG("ex:floatCon:"<<p->fid.f<<FIM_SYM_ENDL);
+			DBG("ex:floatCon:"<<p->fid.f<<"\n");
 			/* FIXME : are we sure this case executes ? */
 			return p->fid.f;
 		case vId:
@@ -206,14 +205,14 @@ Var ex(nodeType *p)
 			       	return fim_rand();//FIXME
 			else
 #endif
-			if(fim::cc.getVariableType(p->scon.s)==FIM_SYM_TYPE_INT)
+			if(fim::cc.getVariableType(p->scon.s)=='i')
 			{
-				DBG("vId:"<<p->scon.s<<":"<<(int)fim::cc.getIntVariable(p->scon.s)<<FIM_SYM_ENDL);
+				DBG("vId:"<<p->scon.s<<":"<<(int)fim::cc.getIntVariable(p->scon.s)<<"\n");
 				//return (int)fim::cc.getIntVariable(p->scon.s);
 				return fim::cc.getVariable(p->scon.s);
 			}
 
-			if(fim::cc.getVariableType(p->scon.s)==FIM_SYM_TYPE_FLOAT)
+			if(fim::cc.getVariableType(p->scon.s)=='f')
 			{
 				DBG("'f':\n");
 				//return (float)fim::cc.getFloatVariable(p->scon.s);
@@ -235,7 +234,7 @@ Var ex(nodeType *p)
 			DBG("'typeOpr':\n");
 		switch(p->opr.oper)
 		{
-			case FIM_SYM_STRING_CONCAT:
+			case '.':
 				// we use the ',' operator
 				//return (ex(p->opr.op[0]) , ex(p->opr.op[1]));
 				//string collation (we assume these are strings !)
@@ -246,15 +245,15 @@ Var ex(nodeType *p)
 				{
 					ex(p->opr.op[1]);
 				}
-				return (fim_int)0;
+				return 0;
 			case IF:
-				DBG("IF:"<<(ex(p->opr.op[0]).getInt())<<FIM_SYM_ENDL);
+				DBG("IF:"<<(ex(p->opr.op[0]).getInt())<<"\n");
 				if (ex(p->opr.op[0]).getInt())
 					ex(p->opr.op[1]);
 				else if (p->opr.nops > 2)
 					ex(p->opr.op[2]);
-				return (fim_int)0;
-			case FIM_SYM_SEMICOLON:
+				return 0;
+			case ';':
 				/*
 				 *		;
 				 *             / \
@@ -268,16 +267,14 @@ Var ex(nodeType *p)
 			if( p->opr.nops == 2 )
 			{
 				int times=ex(p->opr.op[1]).getInt();
-				if(times<0)
-					return (fim_int)-1;
+				if(times<0)return -1;
 				for (int i=0;i<times && fim::cc.catchLoopBreakingCommand(0)==0;++i)
 				{
 					ex(p->opr.op[0]);
 				}
-			  	return (fim_int)0;	
+			  	return 0;	
 			}
-			else
-				return (fim_int)-1;
+			else return -1;
 			case 'x': 
 				DBG("X\n");
 			  /*
@@ -289,22 +286,22 @@ Var ex(nodeType *p)
 			  	if( p->opr.nops<1 )
 			  {
 				  DBG("NO-OP\n");
-				  return (fim_int)-1;
+				  return -1;
 			  }
 			  if(p->opr.nops==2)	//int yacc.ypp we specified only 2 ops per x node
 		          {
 				  nodeType *np=p;	
-				  //nodeType *dp;
+				  nodeType *dp;
 	                          np=(np->opr.op[1]); //the right subtree first node
 				  while( np &&    np->opr.nops >=1 )
 				  if( np->opr.oper=='a' )
 			  	  {
 					  std::vector<fim::string> na;
 					  na=var(np);
-				          for(fim_size_t i=0;i<na.size();++i)
-                                          { //std::cout << "?"<<na[i]<<FIM_SYM_ENDL;
+				          for(int i=0;i<na.size();++i)
+                                          { //std::cout << "?"<<na[i]<<"\n";
 					    args.push_back(na[i]);}// FIXME : non sono sicuro che questo serva
-					  DBG("A:"<<np->opr.nops<<FIM_SYM_ENDL);
+					  DBG("A:"<<np->opr.nops<<"\n");
 					  break;
 #if 0
 					  return 0;
@@ -330,7 +327,7 @@ Var ex(nodeType *p)
 					  {	
 						  //probably dead code
 					  }
-					  else if( ((dp->opr.oper==FIM_SYM_STRING_CONCAT)))
+					  else if( ((dp->opr.oper=='.')))
 					  {
 				  	//cout <<  "DEAD CODE\n";
 						  //probably dead code
@@ -339,7 +336,7 @@ Var ex(nodeType *p)
 					  assert(dp);
 #endif
 				  }
-			  	  else if( np->opr.oper==FIM_SYM_STRING_CONCAT )
+			  	  else if( np->opr.oper=='.' )
 				  {
 				  	//cout <<  "DEAD CODE\n";
 					  //probably dead code
@@ -351,35 +348,35 @@ Var ex(nodeType *p)
 				 * single command execution
 				 */
 				fim::string result;
-				//std::cout  <<"GULP:"<< p->opr.op[0]->scon.s<< args[0] <<FIM_SYM_ENDL;
+				//std::cout  <<"GULP:"<< p->opr.op[0]->scon.s<< args[0] <<"\n";
 //				if(args.size()>0)
-//					std::cout  <<"GULP:"<< (int*)p->opr.op[0]->scon.s<<" "<<p->opr.op[0]->scon.s<<" "<<args[0] <<FIM_SYM_ENDL;
+//					std::cout  <<"GULP:"<< (int*)p->opr.op[0]->scon.s<<" "<<p->opr.op[0]->scon.s<<" "<<args[0] <<"\n";
 //				else
-//					std::cout  <<"GULP:"<< args.size() <<FIM_SYM_ENDL;
+//					std::cout  <<"GULP:"<< args.size() <<"\n";
 				if(p)
 				if(p->opr.op[0])
 				if(p->opr.op[0]->scon.s) result =
 				       	fim::cc.execute(p->opr.op[0]->scon.s,args);
 				/* sometimes there are NULLs  : BAD !!  */
-				return fim_atoi(result.c_str());
+				return atoi(result.c_str());
 			  }
 		}
 		case 'a':
 			// we shouldn't be here, because 'a' (argument) nodes are evaluated elsewhere
 			assert(0);
-			return (fim_int)-1;
+			return -1;
 		case '=':
 			//assignment of a variable
 			s=p->opr.op[0]->scon.s;
-			DBG("SV:"<<s<<FIM_SYM_ENDL)
+			DBG("SV:"<<s<<"\n")
 			typeHint=p->opr.op[0]->typeHint;
-			if(typeHint==FIM_SYM_TYPE_FLOAT)
+			if(typeHint=='f')
 			{
-				DBG("SVf"<<s<<FIM_SYM_ENDL);
+				DBG("SVf"<<s<<"\n");
 				fValue=p->opr.op[1]->fid.f;
 				fim::cc.setVariable(s,fValue);
-				return (fim_int)fValue;
-			}//FIM_SYM_TYPE_INT
+				return (int)fValue;
+			}//'i'
 			else if(typeHint=='s')
 			{
 				DBG("SVs\n");
@@ -389,7 +386,7 @@ Var ex(nodeType *p)
 				}
 				else 
 				{
-					DBG("SVs:"<<s<<":"<<p->opr.op[0]->scon.s<<FIM_SYM_ENDL);
+					DBG("SVs:"<<s<<":"<<p->opr.op[0]->scon.s<<"\n");
 					// got a string!
 		       		        fim::cc.setVariable(s,p->opr.op[0]->scon.s);
 #if 0
@@ -400,12 +397,12 @@ Var ex(nodeType *p)
 			                	//return fim::cc.getIntVariable(s);
 			                	return fim::cc.getStringVariable(s);
 				}
-				return (fim_int)-1;
-			}//FIM_SYM_TYPE_INT
-			else if(typeHint==FIM_SYM_TYPE_INT)
+				return -1;
+			}//'i'
+			else if(typeHint=='i')
 			{
 				iValue=ex(p->opr.op[1]).getInt();
-				DBG("SVi:"<<s<<":"<<iValue<<""<<FIM_SYM_ENDL);
+				DBG("SVi:"<<s<<":"<<iValue<<""<<"\n");
 				fim::cc.setVariable(s,iValue);
 				return iValue;
 			}
@@ -421,14 +418,14 @@ Var ex(nodeType *p)
 				Var v=cvar(p->opr.op[1]);
 				//iValue=r;
 				fim::cc.setVariable(s,v);
-			        DBG("SET:"<<s<<":"<<v.getString()<<" '"<<(fim_char_t)v.getType()<<"'\n");
-			        DBG("GET:"<<s<<":"<<fim::cc.getVariable(s).getString()<<FIM_SYM_ENDL);
-			        //DBG("GET:"<<s<<":"<<fim::cc.getStringVariable(s)<<FIM_SYM_ENDL);
+			        DBG("SET:"<<s<<":"<<v.getString()<<" '"<<(char)v.getType()<<"'\n");
+			        DBG("GET:"<<s<<":"<<fim::cc.getVariable(s).getString()<<"\n");
+			        //DBG("GET:"<<s<<":"<<fim::cc.getStringVariable(s)<<"\n");
 
 				if(/*want_bugs*/0){
 				//fim::cc.setVariable(s,r.c_str());
 			        string rs = fim::cc.getStringVariable(s);
-				DBG("RS:"<<rs <<FIM_SYM_ENDL);
+				DBG("RS:"<<rs <<"\n");
 				return rs;
 				}
 				else return v;
@@ -439,23 +436,18 @@ Var ex(nodeType *p)
 			{
 				DBG("SV?\n");
 			}
-#if FIM_WANT_AVOID_FP_EXCEPTIONS
-			case '%': {Var v1=ex(p->opr.op[0]),v2=ex(p->opr.op[1]); if(v2.getInt())return v1%v2; else return v2;};
-			case '/': {Var v1=ex(p->opr.op[0]),v2=ex(p->opr.op[1]); if(v2.getInt())return v1/v2; else return v2;};
-#else /* FIM_WANT_AVOID_FP_EXCEPTIONS */
-			case '%': return ex(p->opr.op[0]) % ex(p->opr.op[1]); // FIXME: may generate an exception
-			case '/': return ex(p->opr.op[0]) / ex(p->opr.op[1]); // FIXME: may generate an exception
-#endif /* FIM_WANT_AVOID_FP_EXCEPTIONS */
+			case '%': return ex(p->opr.op[0]) % ex(p->opr.op[1]);
 			case '+': return ex(p->opr.op[0]) + ex(p->opr.op[1]);
-			case '!': return (fim_int)(((ex(p->opr.op[0])).getInt())==0?1:0);
+			case '!': return ((ex(p->opr.op[0])).getInt())==0?1:0;
 			/* unary minus is still under definition */
 			case UMINUS:
-				return Var((fim_int)0) - ex(p->opr.op[0]);
+				return Var(0) - ex(p->opr.op[0]);
 			case '-': 
 				DBG("SUB\n");
 				if ( 2==p->opr.nops) {Var d= ex(p->opr.op[0]) - ex(p->opr.op[1]);return d;}
-				else return Var((fim_int)0) - ex(p->opr.op[0]);
+				else return Var(0) - ex(p->opr.op[0]);
 			case '*': return ex(p->opr.op[0]) * ex(p->opr.op[1]);
+			case '/': return ex(p->opr.op[0]) / ex(p->opr.op[1]);
 			case '<': return ex(p->opr.op[0]) < ex(p->opr.op[1]);
 			case '>': return ex(p->opr.op[0]) > ex(p->opr.op[1]);
 			//comparison operators : evaluation to integer..
@@ -466,14 +458,11 @@ Var ex(nodeType *p)
 			case REGEXP_MATCH: return ex(p->opr.op[0]).re_match(ex(p->opr.op[1]));
 			case AND:return ex(p->opr.op[0]) && ex(p->opr.op[1]);
 			case OR :return ex(p->opr.op[0]) || ex(p->opr.op[1]);
-			case BOR :return ex(p->opr.op[0]) | ex(p->opr.op[1]);
-			case BAND:return ex(p->opr.op[0]) & ex(p->opr.op[1]);
-			/* FIXME: NEED A DEFAULT CASE */
 		}	
 		case cmdId:/* FIXME : cmdId is dead */
 			DBG("cmdId ?!\n");
-			return Var((fim_int)0);
+			return 0;
 
 	}
-	return Var((fim_int)0);
+	return 0;
 }

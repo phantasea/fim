@@ -15,8 +15,8 @@ if( a==20 ){stdout "{command;;} constructs work";}
 else {stdout "{command;;} constructs don't work";}
 
 
-stdout "please note that the 'quit' command is still untested";
+stdout "please note that the 'return' command is still untested";
 rc=0;
 stdout "command blocking test success";
-quit rc;
+return rc;
 

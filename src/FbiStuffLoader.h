@@ -1,8 +1,8 @@
-/* $LastChangedDate: 2014-12-07 14:17:36 +0100 (Sun, 07 Dec 2014) $ */
+/* $Id: FbiStuffLoader.h 203 2009-01-10 11:13:17Z dezperado $ */
 /*
  FbiStuffLoader.h : fbi functions for loading files, modified for fim
 
- (c) 2008-2013 Michele Martone
+ (c) 2008-2009 Michele Martone
  (c) 1998-2006 Gerd Knorr <kraxel@bytesex.org>
 
     This program is free software; you can redistribute it and/or modify
@@ -27,13 +27,14 @@
 #ifndef FIM_STUFF_LOADER_H
 #define FIM_STUFF_LOADER_H
 
-#include "fim_types.h"
+#include "fim.h"
+
 #include "FbiStuffList.h"
 
 //#include "list.h"
 #ifdef USE_X11
 # include <X11/Intrinsic.h>
-#endif /* USE_X11 */
+#endif
 
 namespace fim
 {
@@ -45,7 +46,7 @@ enum ida_extype {
 
 struct ida_extra {
     enum ida_extype   type;
-    fim_byte_t     *data;
+    unsigned char     *data;
     unsigned int      size;
     struct ida_extra  *next;
 };
@@ -59,19 +60,16 @@ struct ida_image_info {
     struct ida_extra  *extra;
 #ifdef FIM_EXPERIMENTAL_ROTATION
     unsigned int      fim_extra_flags;/* FIXME : unclean: regard this as a hack (flag set on a rotated image) */
-#endif /* FIM_EXPERIMENTAL_ROTATION */
+#endif
 
     int               thumbnail;
     unsigned int      real_width;
     unsigned int      real_height;
-#if FIM_EXPERIMEMTAL_IMG_NMSPC
-    fim::Namespace *nsp;
-#endif /* FIM_EXPERIMEMTAL_IMG_NMSPC */
 };
 
 struct ida_image {
     struct ida_image_info  i;
-    fim_byte_t          *data;
+    unsigned char          *data;
 };
 struct ida_rect {
     int x1,y1,x2,y2;
@@ -79,25 +77,24 @@ struct ida_rect {
 
 /* load image files */
 struct ida_loader {
-    //const fim_byte_t  *magic;
-    const fim_char_t  *magic;
+    const char  *magic;
     int   moff;
     int   mlen;
-    const fim_char_t  *name;
-    void* (*init)(FILE *fp, const fim_char_t *filename, unsigned int page,
+    const char  *name;
+    void* (*init)(FILE *fp, char *filename, unsigned int page,
 		  struct ida_image_info *i, int thumbnail);
-    void  (*read)(fim_byte_t *dst, unsigned int line, void *data);
+    void  (*read)(unsigned char *dst, unsigned int line, void *data);
     void  (*done)(void *data);
     struct list_head list;
 };
 
 /* filter + operations */
 struct ida_op {
-    const fim_char_t  *name;
-    void* (*init)(const struct ida_image *src, struct ida_rect *rect,
+    const char  *name;
+    void* (*init)(struct ida_image *src, struct ida_rect *rect,
 		  struct ida_image_info *i, void *parm);
-    void  (*work)(const struct ida_image *src, struct ida_rect *rect,
-		  fim_byte_t *dst, int line,
+    void  (*work)(struct ida_image *src, struct ida_rect *rect,
+		  unsigned char *dst, int line,
 		  void *data);
     void  (*done)(void *data);
 };
@@ -110,13 +107,13 @@ void  op_free_done(void *data);
 #ifdef USE_X11
 /* save image files */
 struct ida_writer {
-    const fim_char_t  *label;
-    const fim_char_t  *ext[8];
+    const char  *label;
+    const char  *ext[8];
     int   (*write)(FILE *fp, struct ida_image *img);
     int   (*conf)(Widget widget, struct ida_image *img);
     struct list_head list;
 };
-#endif /* USE_X11 */
+#endif
 
 /* ----------------------------------------------------------------------- */
 /* resolution                                                              */
@@ -128,16 +125,16 @@ struct ida_writer {
 /* ----------------------------------------------------------------------- */
 
 /* helpers */
-void load_bits_lsb(fim_byte_t *dst, fim_byte_t *src, int width,
+void load_bits_lsb(unsigned char *dst, unsigned char *src, int width,
 		   int on, int off);
-void load_bits_msb(fim_byte_t *dst, fim_byte_t *src, int width,
+void load_bits_msb(unsigned char *dst, unsigned char *src, int width,
 		   int on, int off);
-void load_gray(fim_byte_t *dst, fim_byte_t *src, int width);
-void load_graya(fim_byte_t *dst, fim_byte_t *src, int width);
-void load_rgba(fim_byte_t *dst, fim_byte_t *src, int width);
+void load_gray(unsigned char *dst, unsigned char *src, int width);
+void load_graya(unsigned char *dst, unsigned char *src, int width);
+void load_rgba(unsigned char *dst, unsigned char *src, int width);
 
 int load_add_extra(struct ida_image_info *info, enum ida_extype type,
-		   fim_byte_t *data, unsigned int size);
+		   unsigned char *data, unsigned int size);
 struct ida_extra* load_find_extra(struct ida_image_info *info,
 				  enum ida_extype type);
 int load_free_extras(struct ida_image_info *info);
@@ -145,7 +142,7 @@ int load_free_extras(struct ida_image_info *info);
 /* ----------------------------------------------------------------------- */
 
 /* other */
-//extern int debug;
+extern int debug;
 extern struct ida_loader ppm_loader;
 extern struct ida_loader sane_loader;
 extern struct ida_writer ps_writer;
@@ -158,11 +155,10 @@ extern struct ida_writer jpeg_writer;
 extern struct list_head loaders;
 extern struct list_head writers;
 
-void fim_load_register(struct ida_loader *loader);
-void fim_write_register(struct ida_writer *writer);
-void fim_loaders_to_stderr(void);
+void load_register(struct ida_loader *loader);
+void write_register(struct ida_writer *writer);
 
 }
-#endif /* FIM_STUFF_LOADER_H */
+#endif
 
 

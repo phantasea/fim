@@ -1,8 +1,8 @@
-/* $LastChangedDate: 2015-01-17 15:47:05 +0100 (Sat, 17 Jan 2015) $ */
+/* $Id: readline.h 135 2008-05-06 20:41:10Z dezperado $ */
 /*
  readline.h : Code dealing with the GNU readline library.
 
- (c) 2008-2015 Michele Martone
+ (c) 2008 Michele Martone
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -24,18 +24,12 @@
 #include <readline/readline.h>	/*	the GNU readline library	*/
 #include <readline/history.h> 	/*	the GNU readline library	*/
 #include <readline/keymaps.h> 	/*	the GNU readline library	*/
-#include "fim_types.h"
-
-namespace fim
-{
-	fim_char_t* fim_readline(const fim_char_t *prompt);
-}
 
 namespace rl
 {
-	void initialize_readline (fim_bool_t with_no_display_device, fim_bool_t wcs);
-	int fim_search_rl_startup_hook(void);
+	void initialize_readline ();
+	char * command_generator (const char *text,int state);
 }
 
-#endif /* FIM_READLINE_H */
+#endif
 

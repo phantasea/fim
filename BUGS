@@ -1,4 +1,4 @@
-$LastChangedDate: 2015-01-31 17:25:11 +0100 (Sat, 31 Jan 2015) $
+$Id: BUGS 268 2009-12-08 23:05:55Z dezperado $
 
 ==== BUG REPORTING
 
@@ -50,14 +50,11 @@ with a '@' and _Baz_ with a '.'.
 
 ==== KNOWN BUGS
 
-20150131	in aalib mode PageUp / PageDown do not seem to work.
-20150123
-
    When in framebuffer mode, never, for ANY reason, press C-z (^Z) with the
    intention of putting fim in the background. It will blind your console and
    allow only blind typing, which is a very dangerous situation!
 
-20110603	Window splitting is disabled.
+   In windowed aalib setups (that is, when running aalib under X spawns in a separate window), fim is completely unusable.
 
 ==== MINOR ISSUES
 
@@ -69,9 +66,12 @@ with a '@' and _Baz_ with a '.'.
 		( see http://bugs.debian.org/cgi-bin/bugreport.cgi?bug=559274
 		  and http://bugs.debian.org/cgi-bin/bugreport.cgi?msg=5;filename=xfig_poc.f;att=1;bug=559274)
 		As long as xfig (fig2dev) is accessed through the popen() system call, there will be no harm to fim from xfig crash.
-20091015	In 16 bit graphics mode, some lines which should be white actually look blue (seems not fim' fault; happens on both on ARM and x86)
+20091015	In 16 bit mode, some lines which should be white actually look blue (seems not fim' fault; happens on both on ARM and x86)
 20091013	fim -i < file.pdf # does not work
-20091009	fim does not support 1,2,4 bit modes
+20091009	on dual screen, SDL will occupy both screens even if we don't want it to do so
+20091009	we do not support 1,2,4 bit modes
+20090601	under X11, some aalib implementations open a window. well, this breaks readline functionality, when fim is run via aalib under X11 in such an implementation.
+20090404	the aalib key binding is not complete and may not be fully portable
 20090328	problems with --std=c++98 in legacy src/FbiStuffJpeg.cpp code (now commented)
 20070919	while command suffers from being not interruptible in some cases (when the image is small and not 'panable')
 20070912	Debugging it with the framebuffer under gdb hangs the console (even with -p).
@@ -94,10 +94,6 @@ with a '@' and _Baz_ with a '.'.
 		  or trying to get to some X instance via ALT-F7-like sequences, or even restart the computer),
 		  and blind typing could be dangerous, if you do now know what you are doing!
 
-==== OUTSTANDING FIXED ISSUES
-
-20110602	fim versions before svn version r373 segfault in 32 bit framebuffer mode, on 64 bit builds
-
 ==== FIXED FBI/FBGS ORIGINATING BUGS
 
  Replaced popen with pipe calls : http://bugs.debian.org/cgi-bin/bugreport.cgi?bug=422034, in rev. 213.
@@ -113,12 +109,8 @@ with a '@' and _Baz_ with a '.'.
 
 ==== UNFIXED EXTERNALLY ORIGINATING BUGS
 
-20090329	On my debian box's aalib, the ASCII art driver leaks 224 bytes of memory.
+20090329	On my debian box's aalib, the ascii art driver leaks 224 bytes of memory.
 Actually, it happens the same when compiling aalib-1.4.0's aafire.c program against debian aalib
 and running it in console mode (no X).
 After clean aalib recompilation, these problems vanish.
-
-==== SOLVED ISSUES
-
-20110712	in sdl (x11) mode, when fim is spawned in a non-terminal environment, the readline mode does not work in the proper way. detecting this situation may be helpful to disable the readline mode at all in these cases, until a readline-centric fix is found.   (seems fixed with r688)
 

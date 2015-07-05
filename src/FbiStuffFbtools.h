@@ -1,8 +1,8 @@
-/* $LastChangedDate: 2013-07-04 23:07:07 +0200 (Thu, 04 Jul 2013) $ */
+/* $Id: FbiStuffFbtools.h 203 2009-01-10 11:13:17Z dezperado $ */
 /*
  FbiStuffFbtools.h : fbi functions from fbtools.c, modified for fim
 
- (c) 2008-2013 Michele Martone
+ (c) 2008-2009 Michele Martone
  (c) 1998-2006 Gerd Knorr <kraxel@bytesex.org>
 
     This program is free software; you can redistribute it and/or modify
@@ -39,4 +39,4 @@ void fb_catch_exit_signals(void);
 void svga_dither_palette(int r, int g, int b);
 
 }
-#endif /* FIM_FBISTUFFFBTOOLS_H */
+#endif

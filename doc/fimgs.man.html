@@ -1,144 +1,78 @@
-<!-- Creator     : groff version 1.21 -->
-<!-- CreationDate: Sun Apr 19 13:14:30 2015 -->
-<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
-"http://www.w3.org/TR/html4/loose.dtd">
-<html>
-<head>
-<meta name="generator" content="groff -Thtml, see www.gnu.org">
-<meta http-equiv="Content-Type" content="text/html; charset=US-ASCII">
-<meta name="Content-Style" content="text/css">
-<style type="text/css">
-       p       { margin-top: 0; margin-bottom: 0; vertical-align: top }
-       pre     { margin-top: 0; margin-bottom: 0; vertical-align: top }
-       table   { margin-top: 0; margin-bottom: 0; vertical-align: top }
-       h1      { text-align: center }
-</style>
-<title>fimgs</title>
+Content-type: text/html
 
-</head>
-<body>
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML><HEAD><TITLE>Man page of fimgs</TITLE>
+</HEAD><BODY>
+<H1>fimgs</H1>
+Section: User Commands  (1)<BR>Updated: (c) 2007-2009 Michele Martone<BR><A HREF="#index">Index</A>
+<A HREF="/cgi-bin/man/man2html">Return to Main Contents</A><HR>
 
-<h1 align="center">fimgs</h1>
+<A NAME="lbAB">&nbsp;</A>
+<H2>NAME</H2>
 
-<a href="#NAME">NAME</a><br>
-<a href="#SYNOPSIS">SYNOPSIS</a><br>
-<a href="#DESCRIPTION">DESCRIPTION</a><br>
-<a href="#OPTIONS">OPTIONS</a><br>
-<a href="#SEE ALSO">SEE ALSO</a><br>
-<a href="#AUTHOR">AUTHOR</a><br>
+fimgs - poor man's [<A HREF="http://]PostScript/pdf/dvi/cbr/rar/cbz/zip">http://]PostScript/pdf/dvi/cbr/rar/cbz/zip</A> viewer for the linux
+framebuffer console
+<A NAME="lbAC">&nbsp;</A>
+<H2>SYNOPSIS</H2>
 
-<hr>
+<B>fimgs [ options ] file</B>
 
+<A NAME="lbAD">&nbsp;</A>
+<H2>DESCRIPTION</H2>
 
-<h2>NAME
-<a name="NAME"></a>
-</h2>
+<B>fimgs  </B>
 
-
-<p style="margin-left:11%; margin-top: 1em">fimgs &minus;
-poor man&rsquo;s [http://]PostScript/pdf/dvi/cbr/rar/cbz/zip
-viewer for the linux framebuffer console</p>
-
-<h2>SYNOPSIS
-<a name="SYNOPSIS"></a>
-</h2>
+is a simple wrapper script which takes a PostScript or pdf
+or .cbr or .rar or .cbz or .zip or .dvi
+or any of the above
+prefixed with http:// 
+as input, renders the pages using ghostscript into a
+temporarely directory and finally calls fbi to display them.
+In case of compressed archives (in zip or rar formats), the images 
+are decompressed into a directory and displayed.
+In this latter case, only images contained in the archive will be displayed
+(no nested archives or pdf's or ps's or dvi's).
+<A NAME="lbAE">&nbsp;</A>
+<H2>OPTIONS</H2>
 
 
-<p style="margin-left:11%; margin-top: 1em"><b>fimgs [
-{fimgs&minus;options} ] file [&minus;&minus;
-[{fim&minus;options}]]</b></p>
+<B>fimgs</B>
 
-<h2>DESCRIPTION
-<a name="DESCRIPTION"></a>
-</h2>
+still does not understand all of fim's options (they are not passed through).
+so please use 
+<B>fimgs -h</B>
 
-
-<p style="margin-left:11%; margin-top: 1em"><b>fimgs</b> is
-a simple wrapper script which takes a PostScript or pdf or
-.cbr or .rar or .cbz or .zip or .dvi or any of the above
-prefixed with http:// or https:// or ssh:// as input,
-renders the pages using ghostscript into a temporary
-directory and finally calls <b>fim</b> to display them.</p>
-
-<p style="margin-left:11%; margin-top: 1em">In case of
-compressed archives (in zip or rar formats), the images are
-decompressed into a directory and displayed using
-<b>fim</b>. In this latter case, only images contained in
-the archive will be displayed (no nested archives or
-pdf&rsquo;s or ps&rsquo;s or dvi&rsquo;s).</p>
-
-<p style="margin-left:11%; margin-top: 1em">The temporary
-directory name is taken from the $TMPDIR environment
-variable.</p>
-
-<h2>OPTIONS
-<a name="OPTIONS"></a>
-</h2>
+to get help on its options.
+<P>
 
 
-<p style="margin-left:11%; margin-top: 1em">To pass through
-options to <b>fim</b>, you may specify them after
-&quot;&minus;&minus;&quot;.</p>
+<P>
+You can
+use option -p &lt;password&gt; if your PDF file requires password.
+<A NAME="lbAF">&nbsp;</A>
+<H2>SEE ALSO</H2>
 
-<p style="margin-left:11%; margin-top: 1em"><b>&minus;r
-{resolution}</b> Specify resolution for the &rsquo;gs&rsquo;
-&minus;r option (e.g.: 96x96; default 120x120).</p>
+<A HREF="/cgi-bin/man/man2html?1+fim">fim</A>(1), <A HREF="/cgi-bin/man/man2html?1+gs">gs</A>(1), <A HREF="/cgi-bin/man/man2html?1+fbi">fbi</A>(1), <A HREF="/cgi-bin/man/man2html?1+fbgs">fbgs</A>(1), <A HREF="/cgi-bin/man/man2html?1+bash">bash</A>(1)
+<A NAME="lbAG">&nbsp;</A>
+<H2>AUTHOR</H2>
 
-<table width="100%" border="0" rules="none" frame="void"
-       cellspacing="0" cellpadding="0">
-<tr valign="top" align="left">
-<td width="11%"></td>
-<td width="3%">
+Michele Martone &lt;dezperado _ GUESS _ autistici.org&gt;. 
+<P>
 
-
-<p style="margin-top: 1em"><b>&minus;m</b></p></td>
-<td width="8%"></td>
-<td width="40%">
-
-
-<p style="margin-top: 1em">Dump a man page for fimgs.</p></td>
-<td width="38%">
-</td></tr>
-</table>
-
-<p style="margin-left:11%; margin-top: 1em"><b>&minus;p
-{password}</b></p>
-
-<p style="margin-left:22%;">Specify password for the
-&rsquo;gs&rsquo; &minus;p (password) option.</p>
-
-<table width="100%" border="0" rules="none" frame="void"
-       cellspacing="0" cellpadding="0">
-<tr valign="top" align="left">
-<td width="11%"></td>
-<td width="3%">
-
-
-<p style="margin-top: 1em"><b>&minus;h</b></p></td>
-<td width="8%"></td>
-<td width="43%">
-
-
-<p style="margin-top: 1em">Will display a help message.</p></td>
-<td width="35%">
-</td></tr>
-</table>
-
-<h2>SEE ALSO
-<a name="SEE ALSO"></a>
-</h2>
-
-
-<p style="margin-left:11%; margin-top: 1em">fim(1),
-fimrc(1), gs(1), fbi(1), fbgs(1), bash(1)</p>
-
-<h2>AUTHOR
-<a name="AUTHOR"></a>
-</h2>
-
-
-<p style="margin-left:11%; margin-top: 1em">Michele Martone
-&lt;dezperado _ GUESS _ autistici.org&gt;.</p>
-<hr>
-</body>
-</html>
+<HR>
+<A NAME="index">&nbsp;</A><H2>Index</H2>
+<DL>
+<DT><A HREF="#lbAB">NAME</A><DD>
+<DT><A HREF="#lbAC">SYNOPSIS</A><DD>
+<DT><A HREF="#lbAD">DESCRIPTION</A><DD>
+<DT><A HREF="#lbAE">OPTIONS</A><DD>
+<DT><A HREF="#lbAF">SEE ALSO</A><DD>
+<DT><A HREF="#lbAG">AUTHOR</A><DD>
+</DL>
+<HR>
+This document was created by
+<A HREF="/cgi-bin/man/man2html">man2html</A>,
+using the manual pages.<BR>
+Time: 09:08:47 GMT, March 23, 2013
+</BODY>
+</HTML>

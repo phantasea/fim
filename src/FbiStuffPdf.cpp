@@ -1,8 +1,8 @@
-/* $LastChangedDate: 2014-11-17 19:22:17 +0100 (Mon, 17 Nov 2014) $ */
+/* $Id: FbiStuffPdf.cpp 271 2009-12-13 00:03:48Z dezperado $ */
 /*
  FbiStuffPdf.cpp : fim functions for decoding PDF files
 
- (c) 2008-2014 Michele Martone
+ (c) 2008-2009 Michele Martone
  based on code (c) 1998-2006 Gerd Knorr <kraxel@bytesex.org>
 
     This program is free software; you can redistribute it and/or modify
@@ -38,36 +38,21 @@
  * and subject to change.
  * So when changing these headers here, take care of changing them
  * in the configure script, too.
- * And please don't blame me (fim's author)!
  */
-#include <poppler/cpp/poppler-version.h>
-#if (POPPLER_VERSION_MINOR>=21)
-#if (POPPLER_VERSION_MINOR< 24)
+#include <poppler/poppler-config.h>
+#include <poppler/PDFDoc.h>
+#include <poppler/OutputDev.h>
+#include <poppler/SplashOutputDev.h>
 #include <poppler/splash/SplashBitmap.h>
 #include <poppler/splash/SplashTypes.h>
-#else
-#include <splash/SplashBitmap.h>
-#include <splash/SplashTypes.h>
-#endif /* (POPPLER_VERSION_MINOR< 24) */
-#include <poppler/poppler-config.h>
-#include <poppler/OutputDev.h>
-#include <poppler/PDFDoc.h>
-#include <poppler/SplashOutputDev.h>
 #include <poppler/Page.h>
 #include <poppler/GlobalParams.h>	/* globalParams lives here */
-#endif /* (POPPLER_VERSION_MINOR>=21) */
 
-#if HAVE_FILENO
-#define FIM_PDF_USE_FILENO 1
-#else
-#define FIM_PDF_USE_FILENO 0
-#endif /* HAVE_FILENO */
 
 /*								*/
 
 namespace fim
 {
-extern CommandConsole cc;
 
 /* ---------------------------------------------------------------------- */
 /* load                                                                   */
@@ -77,7 +62,7 @@ struct pdf_state_t {
 	PDFDoc *            pd ;
 	SplashOutputDev *   od ;
 	int row_stride;    /* physical row width in output buffer */
-	fim_byte_t * first_row_dst;
+	unsigned char * first_row_dst;
 };
 
 
@@ -128,45 +113,24 @@ void SplashColorsInit(void)
 }
 
 static void*
-pdf_init(FILE *fp, const fim_char_t *filename, unsigned int page,
+pdf_init(FILE *fp, char *filename, unsigned int page,
 	  struct ida_image_info *i, int thumbnail)
 {
-	fim_char_t _[1];
+	char _[1];
 	_[0]='\0';
 	struct pdf_state_t * ds=NULL;
 	int rotation=0,pageNo=page+1;
-	double zoomReal=100.0;
+	double zoomReal=250.0*2;
 	double hDPI;
 	double vDPI;
 	GBool  useMediaBox ;
 	GBool  crop        ;
 	GBool  doLinks     ;
-	fim_int prd=cc.getIntVariable(FIM_VID_PREFERRED_RENDERING_DPI);
-	prd=prd<1?FIM_RENDERING_DPI:prd;
+	if(filename==FIM_STDIN_IMAGE_NAME){std::cerr<<"sorry, stdin multipage file reading is not supported\n";return NULL;}	/* a drivers's problem */ 
 
-	if(filename==std::string(FIM_STDIN_IMAGE_NAME))
-	{
-		std::cerr<<"sorry, stdin multipage file reading is not supported\n";
-		goto retnull;
-	}	/* a drivers's problem */ 
-
-#if !FIM_PDF_USE_FILENO
 	if(fp) fclose(fp);
-#else
-	if(fp)
-	{
-		// FIXME: this hack will only work on Linux.
-		static fim_char_t linkname[FIM_LINUX_LINKFILENAME_BUFSIZE];
-		sprintf(linkname,"/proc/self/fd/%d",fileno(fp));
-		//printf("%s\n",linkname);
-		filename=linkname;
-		if(-1==access(filename,R_OK))
-			return NULL;
-	}
-#endif /* FIM_PDF_USE_FILENO */
 
-
-	ds = (struct pdf_state_t*)fim_calloc(1,sizeof(struct pdf_state_t));
+	ds = (struct pdf_state_t*)fim_calloc(sizeof(struct pdf_state_t),1);
 
 	if(!ds)
 		return NULL;
@@ -184,10 +148,8 @@ pdf_init(FILE *fp, const fim_char_t *filename, unsigned int page,
 		goto err;
 
 	globalParams->setErrQuiet(gFalse);
-
-#if defined(POPPLER_VERSION_MINOR) && (POPPLER_VERSION_MINOR<22)
 	globalParams->setBaseDir(_);
-#endif /* defined(POPPLER_VERSION_MINOR) && (POPPLER_VERSION_MINOR<22) */
+
 
 	ds->pd = new PDFDoc(new GooString(filename), NULL, NULL, (void*)NULL);
 	if (!ds->pd)
@@ -201,20 +163,14 @@ pdf_init(FILE *fp, const fim_char_t *filename, unsigned int page,
         	GBool bitmapTopDown = gTrue;
         	ds->od = new SplashOutputDev(gSplashColorMode, /*4*/3, gFalse, gBgColor, bitmapTopDown,gFalse/*antialias*/);
 	        if (ds->od)
-#ifdef POPPLER_VERSION	/* as of 0.20.2, from poppler/poppler-config.h */
-			/* FIXME: this is an incomplete fix (triggered on 20120719's email on fim-devel);
-			  I don't really know which version of poppler defines this macro first, but I assume 0.20.2 or so */
-			ds->od->startDoc(ds->pd);
-#else /* POPPLER_VERSION */
 			ds->od->startDoc(ds->pd->getXRef());
-#endif /* POPPLER_VERSION */
     	}
         if (!ds->od)
 		goto err;
 
-	i->dpi    = prd;
-	hDPI = (double)i->dpi* (zoomReal * 0.01);
-	vDPI = (double)i->dpi* (zoomReal * 0.01);
+	i->dpi    = 72; /* FIXME */
+	hDPI = (double)i->dpi* zoomReal * 0.01;
+	vDPI = (double)i->dpi* zoomReal * 0.01;
 
 	useMediaBox = gFalse;
 	crop        = gTrue;
@@ -224,7 +180,6 @@ pdf_init(FILE *fp, const fim_char_t *filename, unsigned int page,
 	if(page>=i->npages || page<0)goto err;
 	
 	ds->pd->displayPage(ds->od, pageNo, hDPI, vDPI, rotation, useMediaBox, crop, doLinks, NULL, NULL);
-
 
 	if(!ds->pd) goto err;
 
@@ -242,12 +197,11 @@ err:
 	if (globalParams)	delete globalParams;
 	globalParams = NULL;
 	if(ds)fim_free(ds);
-retnull:
 	return NULL;
 }
 
 static void
-pdf_read(fim_byte_t *dst, unsigned int line, void *data)
+pdf_read(unsigned char *dst, unsigned int line, void *data)
 {
     	struct pdf_state_t *ds = (struct pdf_state_t*)data;
 	if(!ds)return;
@@ -288,7 +242,7 @@ static struct ida_loader pdf_loader = {
 
 static void __init init_rd(void)
 {
-    fim_load_register(&pdf_loader);
+    load_register(&pdf_loader);
 }
 
 }

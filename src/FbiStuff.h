@@ -1,8 +1,8 @@
-/* $LastChangedDate: 2015-02-11 17:51:25 +0100 (Wed, 11 Feb 2015) $ */
+/* $Id: FbiStuff.h 213 2009-02-21 01:15:08Z dezperado $ */
 /*
  FbiStuff.h : Misc fbi functionality routines, modified for fim
 
- (c) 2008-2013 Michele Martone
+ (c) 2008-2009 Michele Martone
  (c) 1998-2006 Gerd Knorr <kraxel@bytesex.org>
 
     This program is free software; you can redistribute it and/or modify
@@ -34,7 +34,7 @@
 
 #ifdef USE_X11
 # include <X11/Intrinsic.h>
-#endif /* USE_X11 */
+#endif
 #include <stdio.h>//FILE
 #include <stdlib.h>//free()
 #include <errno.h>//free()
@@ -55,19 +55,13 @@ namespace fim
 class FbiStuff{
 public:
 static void free_image(struct ida_image *img);
-static FILE* fim_execlp(const fim_char_t *arg, ...);/* new */
-static struct ida_image* read_image(const fim_char_t *filename, FILE* fd, fim_int page=0, Namespace *nsp=NULL);
-#if FIM_WANT_EXPERIMENTAL_MIPMAPS
-static fim_err_t fim_mipmaps_compute(const struct ida_image *src, fim_mipmap_t * mmp);
-#endif /* FIM_WANT_EXPERIMENTAL_MIPMAPS */
+static FILE* fim_execlp(const char *arg, ...);/* new */
+static struct ida_image* read_image(char *filename, FILE* fd, int page=0);
 static struct ida_image* rotate_image90(struct ida_image *src, unsigned int rotation);
 static struct ida_image* rotate_image(struct ida_image *src, float angle);
-static struct ida_image* scale_image(const struct ida_image *src, float scale, float ascale
-#if FIM_WANT_EXPERIMENTAL_MIPMAPS
-		, const fim_mipmap_t * mmp=NULL
-#endif /* FIM_WANT_EXPERIMENTAL_MIPMAPS */
-	);
-static int fim_filereading_debug(void);
+static struct ida_image* scale_image(struct ida_image *src, float scale, float ascale);
+
+static int fim_filereading_debug();
 };
 
 // filter.h
@@ -100,10 +94,10 @@ struct op_rotate_parm {
 /* 
  * dez's function, on the way to windowing Fim!
  * */
-struct ida_image * fbi_image_clone(const struct ida_image *img);
+struct ida_image * fbi_image_clone(struct ida_image *img);
 
 }
 
-#endif /* FIM_FBI_STUFF_H */
+#endif
 
 

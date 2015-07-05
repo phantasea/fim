@@ -1,8 +1,8 @@
-/* $LastChangedDate: 2015-04-18 21:28:34 +0200 (Sat, 18 Apr 2015) $ */
+/* $Id: Image.h 259 2009-10-07 15:08:58Z dezperado $ */
 /*
  Image.h : Image class headers
 
- (c) 2007-2015 Michele Martone
+ (c) 2007-2009 Michele Martone
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -22,19 +22,7 @@
 #ifndef FIM_IMAGE_H
 #define FIM_IMAGE_H
 
-#include "FbiStuff.h"
 #include "fim.h"
-#if FIM_WANT_PIC_CMTS
-/* FIXME: temporarily here */
-#include <iostream>
-#include <fstream>
-#include <istream>
-#include <ios>
-#include <string>
-#include <map>
-#include <sstream>
-#include <algorithm>
-#endif /* FIM_WANT_PIC_CMTS */
 
 namespace fim
 {
@@ -59,233 +47,102 @@ namespace fim
  *	TODO : rename framebufferdevice.redraw -> this.need_redraw
  */
 
+#define FIM_SCALE_FACTOR 1.322
+
 #ifdef FIM_NAMESPACES
 class Image:public Namespace
-#else /* FIM_NAMESPACES */
+#else
 class Image
-#endif /* FIM_NAMESPACES */
+#endif
 {
 
 	friend class Viewport;		/* don't panic, we are wise people ;) */
 
+
 	public:
 
-	Image(const fim_char_t *fname, FILE *fd=NULL, fim_page_t page = 0);
-	Image(const fim_char_t *fname, Foo& foo, FILE *fd=NULL);
-	~Image(void);
+	Image(const char *fname_, FILE *fd=NULL);
+	Image(const char *fname_, Foo& foo, FILE *fd=NULL);
+	~Image();
 
 	bool prev_page(int j=+1);
 	bool next_page(int j=+1);
-	int n_pages(void)const;
-	bool is_multipage(void)const;
-	int is_mirrored(void)const;
-	int is_flipped(void)const;
+	bool is_multipage()const;
 	bool have_nextpage(int j=1)const;
 	bool have_prevpage(int j=1)const;
 
 	private:
 	Image& operator= (const Image &i){return *this;/* a nilpotent assignation */}
-	fim_scale_t            scale_;	/* viewport variables */
-	fim_scale_t            ascale_;
-	fim_scale_t            newscale_;
-	fim_scale_t            angle_;
-	fim_scale_t            newangle_;
-	fim_page_t		 page_;
+	fim_scale_t            scale;	/* viewport variables */
+	fim_scale_t            ascale;
+	fim_scale_t            newscale;
+	fim_scale_t            angle;
+	fim_scale_t            newangle;
+	fim_page_t		 page;
 
 	/* virtual stuff */
 	public://TMP
-	enum { FIM_ROT_L=3,FIM_ROT_R=1,FIM_ROT_U=2 };
-        struct ida_image *img_     ;     /* local (eventually) copy images */
-	bool reload(void);
+        struct ida_image *img     ;     /* local (eventually) copy images */
+	bool reload();
 	private://TMP
-#if FIM_WANT_EXPERIMENTAL_MIPMAPS
-	fim_mipmap_t mm_;
-#endif /* FIM_WANT_EXPERIMENTAL_MIPMAPS */
-	struct ida_image *fimg_    ;     /* master image */
+	struct ida_image *fimg    ;     /* master image */
 
 	/* image methods */
-	bool load(const fim_char_t *fname, FILE *fd, int want_page);
+	bool load(const char *fname_, FILE *fd, int want_page);
 	void should_redraw(int should=1)const;
 
 	protected:
-	enum { FIM_NO_ROT=0,FIM_ROT_ROUND=4 };
-	enum { FIM_ROT_L_C='L',FIM_ROT_R_C='R',FIM_ROT_U_C='U' };
-	enum { FIM_I_ROT_L=0, FIM_I_ROT_R=1}; /* internal */
-	fim_pgor_t              orientation_;	// orthogonal rotation
+	int              orientation;	//aka rotation
 
-	fim_bool_t invalid_;		//the first time the image is loaded it is set to 1
-	fim_bool_t no_file_;	//no file is associated to this image (used for reading from /dev/stdin at most once.)
-	fim_image_source_t fis_;
+	int    invalid;		//the first time the image is loaded it is set to 1
+	int	no_file;	//no file is associated to this image (used for reading from /dev/stdin at most once.)
+	fim_image_source_t fis;
 
-	string  fname_;		/* viewport variable, too */
-	size_t fs_;		/* file size */
-	size_t ms_;		/* memory size */
+	string  fname;		/* viewport variable, too */
 
-        void free(void);
-	void reset(void);
+        void free();
+	void reset();
 
-        bool tiny(void)const;
+
+        int tiny()const;
 	public:
-	virtual size_t byte_size(void)const;
+	bool can_reload()const{return !no_file;}
+	bool update();
 
-	bool can_reload(void)const;
-	bool update(void);
-
-	fim::string getInfo(void);
-	fim::string getInfoCustom(const fim_char_t * ifsp)const;
+	fim::string getInfo();
 	Image(const Image& image); // yes, a private constructor (was)
-#if FIM_WANT_BDI
-	Image(void);
-#endif	/* FIM_WANT_BDI */
-	fim_err_t rescale( fim_scale_t ns=0.0 );
-	fim_err_t rotate( fim_scale_t angle_=1.0 );
 
-	const fim_char_t* getName(void)const;
-	cache_key_t getKey(void)const;
+	int rescale( float ns=0.0 );
+	int rotate( float angle=1.0 );
+
+	const char* getName()const{return fname.c_str();}
+	cache_key_t getKey()const;
 
 	/* viewport methods */
 
-	void reduce( fim_scale_t factor=FIM_CNS_SCALEFACTOR);
-	void magnify(fim_scale_t factor=FIM_CNS_SCALEFACTOR);
+	void reduce( float factor=FIM_SCALE_FACTOR );
+	void magnify(float factor=FIM_SCALE_FACTOR );
 	
-	fim_pgor_t getOrientation(void)const;
+	int getOrientation();
 
-	fim_err_t setscale(fim_scale_t ns);
+	int setscale(double ns);
 	/* viewport methods ? */
-	fim_err_t scale_increment(fim_scale_t ds);
-	fim_err_t scale_multiply (fim_scale_t sm);
-	bool negate (void);/* let's read e-books by consuming less power :) */
-	bool desaturate (void);
-	bool gray_negate(void);
+	int scale_increment(double ds);
+	int scale_multiply (double sm);
+	bool negate ();/* let's read e-books by consuming less power :) */
+	bool gray_negate();
 
-	bool check_invalid(void);
-	bool check_valid(void);
-	bool valid(void)const{return !invalid_;}
+	bool check_invalid();
+	bool check_valid();
 
-	int width(void)const;
-	fim_coo_t original_width(void)const;
-	int height(void)const;
-	fim_coo_t original_height(void)const;
-	bool goto_page(fim_page_t j);
+	int width();
+	int original_width();
+	int height();
+	int original_height();
+	bool goto_page(int j);
 
-	Image * getClone(void);
+	Image * getClone();
 //	void resize(int nw, int nh);
-	fim_int c_page(void)const;
-	void mm_free(void);
-	void mm_make(void);
-	bool has_mm(void)const;
-	bool cacheable(void)const;
-	void desc_update();
 };
 }
-
-#if FIM_WANT_PIC_CMTS
-/* FIXME: temporarily here */
-typedef std::string fim_fn_t;
-typedef std::string fim_ds_t;
-
-class ImgDscs: public std::map<fim_fn_t,fim_ds_t>
-{
-	template<class T> struct ImgDscsCmp:public std::binary_function<typename T::value_type, typename T::mapped_type, bool>
-	{
-		public:
-		bool operator() (const typename T::value_type &vo, const typename T::mapped_type mo) const
-		{
-			return vo.second == mo;
-		}
-	};
-	ImgDscs::iterator li_;
-	ImgDscs::iterator fo(const key_type & sk, const ImgDscs::iterator & li)
-	{
-		return std::find_if(li,end(),std::bind2nd(ImgDscsCmp<ImgDscs>(),sk));
-	}
-	ImgDscs::const_iterator fo(const key_type & sk, const ImgDscs::const_iterator & li)const
-	{
-		return std::find_if(li,end(),std::bind2nd(ImgDscsCmp<ImgDscs>(),sk));
-	}
-public:
-	ImgDscs::const_iterator fo(const key_type & sk)const
-	{
-		return std::find_if(begin(),end(),std::bind2nd(ImgDscsCmp<ImgDscs>(),sk));
-	}
-private:
-	ImgDscs::iterator fi(const key_type & sk)
-	{
-		ImgDscs::iterator li;
-
-		if(li_ == end())
-			li_ = begin();
-		li = li_ = fo(sk,li_);
-		if(li_ == end())
-			li_ = begin();
-		else
-		++li_;
-		return li;
-	}
-public:
-	void reset(void)
-	{
-		li_=begin();
-	}
-	ImgDscs(void)
-	{
-		reset();
-	}
-	void fetch(const fim_fn_t &dfn, const fim_char_t sc)
-	{
-		std::ifstream mfs (dfn.c_str(),std::ios::app);
-		std::string ln;
-
-		while( std::getline(mfs,ln))
-		{
-			std::stringstream  ls(ln);
-			key_type fn;
-			const fim_char_t nl = '\n';
-			mapped_type ds;
-			if(std::getline(ls,fn,sc))
-			{
-				if(std::getline(ls,ds,nl))
-				{
-					const bool want_basename = true; /*  */
-
-					if(! want_basename )
-						(*this)[fn]=ds;
-					else
-						(*this)[fim_basename_of(fn.c_str())]=ds;
-				}
-			}
-		}
-		reset();
-	}
-	key_type fk(const mapped_type & sk) 
-	{
-		mapped_type v;
-		if ( fo(sk,li_) != end() )
-		{
-			v = fi(sk)->first;
-		}
-		else
-		{
-			reset();
-			if ( fo(sk,li_) != end() )
-				v = fi(sk)->first;
-		}
-		return v;
-	}
-	size_t byte_size(void)const
-	{
-		size_t bs = size() + sizeof(*this);
-		for( const_iterator it = begin();it != end(); ++it )
-			bs += it->first.size() + sizeof(it->first),
-			bs += it->second.size() + sizeof(it->second);
-		return bs;
-	}
-	std::ostream& print(std::ostream &os)const
-	{
-		os << (size()) << " entries in " << byte_size() << " bytes";
-		return os;
-	}
-};
-	std::ostream& operator<<(std::ostream &os, const ImgDscs & id);
-#endif /* FIM_WANT_PIC_CMTS */
-#endif /* FIM_IMAGE_H */
+#endif

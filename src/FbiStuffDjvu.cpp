@@ -1,8 +1,8 @@
-/* $LastChangedDate: 2014-11-17 19:22:17 +0100 (Mon, 17 Nov 2014) $ */
+/* $Id: FbiStuffDjvu.cpp 271 2009-12-13 00:03:48Z dezperado $ */
 /*
  FbiStuffDjvu.cpp : fim functions for decoding DJVU files
 
- (c) 2008-2014 Michele Martone
+ (c) 2008-2009 Michele Martone
  based on code (c) 1998-2006 Gerd Knorr <kraxel@bytesex.org>
 
     This program is free software; you can redistribute it and/or modify
@@ -42,8 +42,7 @@ extern "C"
 
 namespace fim
 {
-typedef char fim_libdjvu_char;
-extern CommandConsole cc;
+
 /* ---------------------------------------------------------------------- */
 /* load                                                                   */
 
@@ -57,7 +56,7 @@ struct djvu_state_t {
     ddjvu_format_t * pf;
     int row_stride;    /* physical row width in output buffer */
 
-    fim_byte_t * first_row_dst;
+    unsigned char * first_row_dst;
 };
 
 /* ---------------------------------------------------------------------- */
@@ -84,23 +83,17 @@ struct djvu_state_t {
    }
 
 static void*
-djvu_init(FILE *fp, const fim_char_t *filename, unsigned int page,
+djvu_init(FILE *fp, char *filename, unsigned int page,
 	  struct ida_image_info *i, int thumbnail)
 {
 	struct djvu_state_t * ds=NULL;
-        // static unsigned int masks[4] = { 0xff0000, 0xff00, 0xff, 0xff000000 };
-	fim_int prd=cc.getIntVariable(FIM_VID_PREFERRED_RENDERING_DPI);
-	prd=prd<1?FIM_RENDERING_DPI:prd;
+        static unsigned int masks[4] = { 0xff0000, 0xff00, 0xff, 0xff000000 };
 
-	if(filename==std::string(FIM_STDIN_IMAGE_NAME))
-	{
-		std::cerr<<"sorry, stdin multipage file reading is not supported\n";
-		goto ret;
-	}	/* a drivers' problem */ 
+	if(filename==FIM_STDIN_IMAGE_NAME){std::cerr<<"sorry, stdin multipage file reading is not supported\n";return NULL;}	/* a drivers's problem */ 
 
 	if(fp) fclose(fp);
 
-	ds = (struct djvu_state_t*)fim_calloc(1,sizeof(struct djvu_state_t));
+	ds = (struct djvu_state_t*)fim_calloc(sizeof(struct djvu_state_t),1);
 	if(!ds) return NULL;
     	ds->first_row_dst = NULL;
 
@@ -110,21 +103,16 @@ djvu_init(FILE *fp, const fim_char_t *filename, unsigned int page,
 	if(!ds->dd)goto err;
 
 	handle_ddjvu_messages(ds->dc,0x1/*0x0*/);
+
 	i->npages = ddjvu_document_get_pagenum(ds->dd);
 	if(page>=i->npages || page<0)goto err;
         ds->dp = ddjvu_page_create_by_pageno (ds->dd, page);/* pages, from 0 */
         if(!ds->dp) goto err;
+
         while (!ddjvu_page_decoding_done (ds->dp)){1;/* we just kill time (FIXME : inefficient) */}
 
         ds->prect.w = ddjvu_page_get_width  (ds->dp) ;
 	ds->prect.h = ddjvu_page_get_height (ds->dp) ;
-#if 1
-	ddjvu_pageinfo_t pi;
-	ddjvu_document_get_pageinfo(ds->dd,page,&pi);
-        ds->prect.w = ((fim_scale_t) (ds->prect.w))* (((fim_scale_t)prd)/((fim_scale_t)pi.dpi));
-        ds->prect.h = ((fim_scale_t) (ds->prect.h))* (((fim_scale_t)prd)/((fim_scale_t)pi.dpi));
-	pi.dpi=prd;
-#endif
 
         if(ds->prect.w<1)goto err;
         if(ds->prect.h<1)goto err;
@@ -141,7 +129,7 @@ djvu_init(FILE *fp, const fim_char_t *filename, unsigned int page,
 	
 	i->width  = ds->prect.w;
 	i->height = ds->prect.h;
-	i->dpi    = pi.dpi;
+	i->dpi    = 72; /* FIXME */
 
 //        ds->pf = ddjvu_format_create (DDJVU_FORMAT_RGBMASK32, 4, masks);
 	ds->pf = ddjvu_format_create (DDJVU_FORMAT_RGB24, 0, 0);
@@ -154,12 +142,12 @@ err:
 	if(ds->dd)ddjvu_document_release(ds->dd);
 	if(ds->dc)ddjvu_context_release(ds->dc);
 	if(ds->pf)ddjvu_format_release(ds->pf);
-ret:
+
 	return NULL;
 }
 
 static void
-djvu_read(fim_byte_t *dst, unsigned int line, void *data)
+djvu_read(unsigned char *dst, unsigned int line, void *data)
 {
     	struct djvu_state_t *ds = (struct djvu_state_t*)data;
 
@@ -174,9 +162,7 @@ djvu_read(fim_byte_t *dst, unsigned int line, void *data)
                            & (ds->rrect),
                            ds->pf,
                            ds->row_stride,
-                           (fim_libdjvu_char*)dst);
-	if(rs)
-		;/* FIXME: missing error handling */
+                           (char*)dst);
         return ;
 }
 
@@ -214,7 +200,7 @@ static struct ida_loader djvu_loader = {
 
 static void __init init_rd(void)
 {
-    fim_load_register(&djvu_loader);
+    load_register(&djvu_loader);
 }
 
 }

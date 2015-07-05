@@ -1,5 +1,5 @@
 
-# $Id: Makefile.am 537 2013-03-22 20:08:54Z dezperado $
+# $Id: Makefile.am 211 2009-02-18 00:14:52Z dezperado $
 
 #
 # The local Manifest building code is not enough
@@ -32,5 +32,5 @@ all:
 ebuild:	$(PREFIX)/Manifest
 
 clean:
-	rm -fR $(PREFIX)/Manifest $(PREFIX)/files 
+	rm -fRd $(PREFIX)/Manifest $(PREFIX)/files 
 

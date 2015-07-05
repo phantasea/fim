@@ -10,6 +10,6 @@ if
 		"work"
 }
 else
-{ stdout "multiline and multiarg constructs don't work." ; quit -1; }
+{ stdout "multiline and multiarg constructs don't work." ; return -1; }
 
 stdout "muiltiline and tab-based test success";

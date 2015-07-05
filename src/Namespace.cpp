@@ -1,8 +1,8 @@
-/* $LastChangedDate: 2015-02-13 00:24:59 +0100 (Fri, 13 Feb 2015) $ */
+/* $Id: Namespace.cpp 229 2009-03-28 15:31:59Z dezperado $ */
 /*
- Namespace.cpp : a class for local variables storage
+ Namespace.h : a class for local variables storage
 
- (c) 2007-2015 Michele Martone
+ (c) 2007-2009 Michele Martone
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -21,196 +21,645 @@
 
 #include "fim.h"
 
-#ifndef FIM_INDIPENDENT_NAMESPACE
-#define FIM_NS_SV(VN,VL) if(rnsp_) return rnsp_->setVariable(VN,VL); /* FIXME: need a better solution here ! */
-#else
-#define FIM_NS_SV(VN,VL)
-#endif /* FIM_INDIPENDENT_NAMESPACE */
-
 namespace fim
 {
-		fim_int Namespace::setVariable(const fim::string& varname,fim_int value)
+
+	/*
+	 * WARNING : TEMPORARILY, THIS FILE WILL HOST SOME CommandConsole's METHODS
+	 * */
+
+	int CommandConsole::setVariable(const fim::string& varname,int value)
+	{
+		/*
+		 * an internal function to set a user variable
+		 */
+#ifdef FIM_NAMESPACES
+		if( varname[1]==':' )
 		{
-			return variables_[varname].setInt(value);
+			try
+			{
+			//a specific namespace was selected!
+			char ns = varname[0];
+			fim::string id=varname.c_str()+2;
+			if( ns == 'w' )
+#ifdef FIM_WINDOWS
+			{
+				//window variable
+				if(window)
+					return window->setVariable(id,value);
+				else
+					return 0;
+			}
+			else
+			if( ns == 'v' )
+			{
+				//viewport variable
+				if(window && window->current_viewportp())
+					return window->current_viewportp()->setVariable(id,value);
+				else
+					return 0;
+			}
+			else
+#endif
+			if( ns == 'i' )
+			{
+				//image variable
+				return
+					browser.c_image()?
+					( (Image*) (browser.c_image()))->setVariable(id,value):
+					0;
+			}
+			else
+			if( ns == 'b' )
+			{
+				//browser variable
+				return browser.setVariable(id,value);
+			}
+			else
+			if( ns != 'g' )
+			{
+				//invalid namespace
+				return 0;
+			}
+			}
+			catch(FimException e){}
+		}
+#endif
+		return variables[varname].setInt(value);
+	}
+
+	float CommandConsole::setVariable(const fim::string& varname,float value)
+	{
+		/*
+		 * an internal function to set a user variable
+		 */
+//		cout << "setVariable " << variables[varname].setFloat(value) << "\n"; 
+#ifdef FIM_NAMESPACES
+		if( varname[1]==':' )
+		{
+			try
+			{
+			//a specific namespace was selected!
+			char ns = varname[0];
+			fim::string id=varname.c_str()+2;
+#ifdef FIM_WINDOWS
+			if( ns == 'w' )
+			{
+				//window variable
+				if(window)
+					return window->setVariable(id,value);
+				else
+					return 0;
+			}
+			else
+			if( ns == 'v' )
+			{
+				//viewport variable
+				if(window && window->current_viewportp())
+					return window->current_viewportp()->setVariable(id,value);
+				else
+					return 0;
+			}
+			else
+#endif
+			if( ns == 'i' )
+			{
+				//image variable
+				return
+					browser.c_image()?
+					( (Image*) (browser.c_image()))->setVariable(id,value):
+					0;
+			}
+			else
+			if( ns == 'b' )
+			{
+				//browser variable
+				return browser.setVariable(id,value);
+			}
+			else
+			if( ns != 'g' )
+			{
+				//invalid namespace
+				return 0;
+			}
+			}
+			catch(FimException e){}
+		}
+#endif
+		return variables[varname].setFloat(value);
+	}
+
+	int CommandConsole::setVariable(const fim::string& varname,const char*value)
+	{
+		/*
+		 * an internal function to set a user variable
+		 */
+		fim::string s(value);
+#ifdef FIM_NAMESPACES
+		if( varname[1]==':' )
+		{
+			//a specific namespace was selected!
+			try
+			{
+			char ns = varname[0];
+			fim::string id=varname.c_str()+2;
+#ifdef FIM_WINDOWS
+			if( ns == 'w' )
+			{
+				//window variable
+				if(window)
+					return window->setVariable(id,s.c_str());
+				else
+					return 0;
+			}
+			else
+			if( ns == 'v' )
+			{
+				//viewport variable
+				if(window && window->current_viewportp())
+					return window->current_viewportp()->setVariable(id,s.c_str());
+				else
+					return 0;
+			}
+			else
+#endif
+			if( ns == 'i' )
+			{
+				//image variable
+				return
+					browser.c_image()?
+					( (Image*) (browser.c_image()))->setVariable(id,s.c_str()):
+					0;
+			}
+			else
+			if( ns == 'b' )
+			{
+				//browser variable
+				return browser.setVariable(id,s.c_str());
+			}
+			else
+			if( ns != 'g' )
+			{
+				//invalid namespace
+				return 0;
+			}
+			}
+			catch(FimException e){}
+		}
+#endif
+		return (int)(variables[varname].setString(s));
+	}
+
+	Var CommandConsole::setVariable(const fim::string varname,const Var&value)
+	{
+		/*
+		 * an internal function to set a user variable
+		 */
+//		std::cout << "CCSV\n";
+#ifdef FIM_NAMESPACES
+		if( varname[1]==':' )
+		{
+			//a specific namespace was selected!
+			try
+			{
+			char ns = varname[0];
+			fim::string id=varname.c_str()+2;
+#ifdef FIM_WINDOWS
+			if( ns == 'w' )
+			{
+				//window variable
+				if(window)
+					return window->setVariable(id,value);
+				else
+					return 0;
+			}
+			else
+			if( ns == 'v' )
+			{
+				//viewport variable
+				if(window && window->current_viewportp())
+					return window->current_viewportp()->setVariable(id,value);
+				else
+					return 0;
+			}
+			else
+#endif
+			if( ns == 'i' )
+			{
+				//image variable
+				if(browser.c_image())
+				DBG(varname<<" : "<<value.getType()<<"\n");
+				return
+					browser.c_image()?
+					( (Image*) (browser.c_image()))->setVariable(id,value):
+					Var(0);
+			}
+			else
+			if( ns == 'b' )
+			{
+				//browser variable
+				return browser.setVariable(id,value);
+			}
+			else
+			if( ns != 'g' )
+			{
+				//invalid namespace
+				return 0;
+			}
+			}
+			catch(FimException e){}
+		}
+#endif
+		variables[varname]=value;	/* FIXME : this does not work */
+		variables[varname].set(value);	/* FIXME : this works */
+		//std::cout <<"CCGS["<<varname<<"]"<<variables[varname].getString()<<"\n";
+		//std::cout <<"CCGS["<<varname<<"]"<<value.getString()<<"\n";
+		return value;;
+	}
+
+
+	int CommandConsole::getIntVariable(const fim::string &varname)const
+	{
+#ifdef FIM_NAMESPACES
+		if( varname[1]==':' )
+		{
+			try
+			{
+			//a specific namespace was selected!
+			char ns = varname[0];
+			fim::string id=varname.c_str()+2;
+#ifdef FIM_WINDOWS
+			if( ns == 'w' )
+			{
+				//window variable
+				if(window)
+					return window->getIntVariable(id);
+				else
+					return 0;
+			}
+			else
+			if( ns == 'v' )
+			{
+				//viewport variable
+				if(window && window->current_viewportp())
+					return window->current_viewportp()->getIntVariable(id);
+				else
+					return 0;
+			}
+			else
+#endif
+			if( ns == 'i' )
+			{
+				//image variable
+				return
+					browser.c_image()?
+					( (Image*) (browser.c_image()))->getIntVariable(id):
+					0;
+			}
+			else
+			if( ns == 'b' )
+			{
+				//browser variable
+				return browser.getIntVariable(id);
+			}
+			else
+			if( ns != 'g' )
+			{
+				//invalid namespace
+				return 0;
+			}
+			}
+			catch(FimException e){}
+		}
+#endif
+		// this scope was selected
+		/*
+		 * the variable name supplied is used as a key to the variables hash
+		 *
+		 * FIXME : now the random stuff is done at interpreter level.
+		 * AND IT SHOULD NOT BE USED INTERNALY BY FIM!
+		 *
+		 * BEWARE!
+		 * */
+		variables_t::const_iterator vi=variables.find(varname);
+		if(vi!=variables.end()) return vi->second.getInt();
+		else return 0;
+		//return ((c_variables_t)(variables))[varname].getInt();
+	}
+
+	float CommandConsole::getFloatVariable(const fim::string &varname)const
+	{
+		/*
+		 * the variable name supplied is used as a key to the variables hash
+		 * */
+//		cout << "getVariable " << varname  << " : " << variables[varname].getFloat()<< "\n";
+//		cout << "getVariable " << varname  << ", type : " << variables[varname].getType()<< "\n";
+#ifdef FIM_NAMESPACES
+		if( varname[1]==':' )
+		{
+			try{	
+			//a specific namespace was selected!
+			char ns = varname[0];
+			fim::string id=varname.c_str()+2;
+#ifdef FIM_WINDOWS
+			if( ns == 'w' )
+			{
+				//window variable
+				if(window)
+					return window->getFloatVariable(id);
+				else
+					return 0.0;
+			}
+			else
+			if( ns == 'v' )
+			{
+				//viewport variable
+				if(window && window->current_viewportp())
+					return window->current_viewportp()->getFloatVariable(id);
+				else
+					return 0.0;
+			}
+			else
+#endif
+			if( ns == 'i' )
+			{
+				//image variable
+				return
+					browser.c_image()?
+					( (Image*) (browser.c_image()))->getFloatVariable(id):
+					0.0;
+			}
+			else
+			if( ns == 'b' )
+			{
+				//browser variable
+				return browser.getFloatVariable(id);
+			}
+			else
+			if( ns != 'g' )
+			{
+				//invalid namespace
+				return 0.0;
+			}
+			}
+			catch(FimException e){}
+		}
+#endif
+		variables_t::const_iterator vi=variables.find(varname);
+		if(vi!=variables.end()) return vi->second.getFloat();
+		else return 0.0;
+//		return variables[varname].getFloat();
+	}
+
+	fim::string CommandConsole::getStringVariable(const fim::string &varname)const
+	{
+		/*
+		 * the variable name supplied is used as a key to the variables hash
+		 * */
+#ifdef FIM_NAMESPACES
+		if( varname[1]==':' )
+		{
+			try
+			{
+			//a specific namespace was selected!
+			char ns = varname[0];
+			fim::string id=varname.c_str()+2;
+#ifdef FIM_WINDOWS
+			if( ns == 'w' )
+			{
+				//window variable
+				if(window)
+					return window->getStringVariable(id);
+				else
+					return "";
+			}
+			else
+			if( ns == 'v' )
+			{
+				//viewport variable
+				if(window && window->current_viewportp())
+					return window->current_viewportp()->getStringVariable(id);
+				else
+					return "";
+			}
+			else
+#endif
+			if( ns == 'i' )
+			{
+				//image variable
+				return
+					browser.c_image()?
+					( (Image*) (browser.c_image()))->getStringVariable(id):
+					"";
+			}
+			else
+			if( ns == 'b' )
+			{
+				//browser variable
+//				std::cout << "brbbbr\n";
+				return browser.getStringVariable(id);
+			}
+			else
+			if( ns != 'g' )
+			{
+				//invalid namespace
+				return "";
+			}
+			}
+			catch(FimException e){}
+		}
+#endif
+//		return variables[varname].getString();
+		variables_t::const_iterator vi=variables.find(varname);
+		if(vi!=variables.end()) 
+		{
+			return vi->second.getString();
+		}
+		else return "";
+	}
+
+		int Namespace::setVariable(const fim::string& varname,int value)
+		{
+			return variables[varname].setInt(value);
 		}
 
-		fim_float_t Namespace::setVariable(const fim::string& varname,fim_float_t value)
+		float Namespace::setVariable(const fim::string& varname,float value)
 		{
-			return variables_[varname].setFloat(value);
+			/*
+			 * an internal function to set a user variable
+			 */
+	//		cout << "setVariable " << variables[varname].setFloat(value) << "\n"; 
+			return variables[varname].setFloat(value);
 		}
 
 		Var Namespace::setVariable(const fim::string& varname,const Var&value)
 		{
-			return (fim_int)variables_[varname].set(value);
+			/*
+			 * an internal function to set a user variable
+			 */
+			/* FIXME ! */
+//			std::cout << "NSSV:"<<varname<<"\n";
+//			std::cout << __FILE__<<":"<<__LINE__<<"\n";
+			variables[varname]=Var(value);
+			variables[varname].set(value);/* FIXME : it seems necessary (see tests) */
+//			std::cout << "NSSV:"<<variables[varname].getString()<<"\n";
+			return variables[varname].getString();
 		}
 
-		fim_int Namespace::setVariable(const fim::string& varname,const fim_char_t*value)
+		int Namespace::setVariable(const fim::string& varname,const char*value)
 		{
+			/*
+			 * an internal function to set a user variable
+			 */
 			fim::string s(value);
-			return (fim_int)(variables_[varname].setString(s));
+			return (int)(variables[varname].setString(s));
 		}
 	
-		fim_bool_t Namespace::isSetVar(const fim::string &varname)const
+		int Namespace::getIntVariable(const fim::string &varname)const
 		{
-			fim_bool_t isv = variables_.find(varname) != variables_.end();
-			return isv;
+			// this scope was selected
+			//return variables[varname];
+			variables_t::const_iterator vi=variables.find(varname);
+			if(vi!=variables.end()) return vi->second.getInt();
+			else return 0;
 		}
 
-		fim_int Namespace::getIntVariable(const fim::string &varname)const
+		Var CommandConsole::getVariable(const fim::string &varname)const
 		{
-			variables_t::const_iterator vi=variables_.find(varname);
-			fim_int retval = FIM_CNS_EMPTY_INT_VAL;
-
-			if(vi!=variables_.end())
-				retval = vi->second.getInt();
-			return retval;
+		/*
+		 * the variable name supplied is used as a key to the variables hash
+		 * */
+#ifdef FIM_NAMESPACES
+		if( varname[1]==':' )
+		{
+			try{	
+			//a specific namespace was selected!
+			char ns = varname[0];
+			fim::string id=varname.c_str()+2;
+#ifdef FIM_WINDOWS
+			if( ns == 'w' )
+			{
+				//window variable
+				if(window)
+					return window->getVariable(id);
+				else
+					return Var();
+			}
+			else
+			if( ns == 'v' )
+			{
+				//viewport variable
+				if(window && window->current_viewportp())
+					return window->current_viewportp()->getVariable(id);
+				else
+					return Var();
+			}
+			else
+#endif
+			if( ns == 'i' )
+			{
+				//image variable
+				return
+					browser.c_image()?
+					( (Image*) (browser.c_image()))->getVariable(id):
+					Var();
+			}
+			else
+			if( ns == 'b' )
+			{
+				//browser variable
+				return browser.getVariable(id);
+			}
+			else
+			if( ns != 'g' )
+			{
+				//invalid namespace
+				return Var();
+			}
+			}
+			catch(FimException e){}
+		}
+#endif
+		variables_t::const_iterator vi=variables.find(varname);
+		if(vi!=variables.end()) return vi->second;
+		else return Var();
 		}
 
 		Var Namespace::getVariable(const fim::string &varname)const
 		{
-			if(varname == "*")
-			{
-				return Var(get_variables_list(true));
-			}
-			else
-			{
-				variables_t::const_iterator vi=variables_.find(varname);
-
-				if(vi!=variables_.end())
-					return vi->second;
-				else
-			       		return Var((fim_int)FIM_CNS_EMPTY_INT_VAL);
-			}
+			// this scope was selected
+			//return variables[varname];
+			variables_t::const_iterator vi=variables.find(varname);
+			if(vi!=variables.end()) return vi->second;
+			else return Var(0);
 		}
 
-		fim_float_t Namespace::getFloatVariable(const fim::string &varname)const
+		float Namespace::getFloatVariable(const fim::string &varname)const
 		{
-			variables_t::const_iterator vi=variables_.find(varname);
-			fim_float_t retval = FIM_CNS_EMPTY_FP_VAL;
-
-			if(vi!=variables_.end())
-			       	retval = vi->second.getString();
-			return retval;
+			/*
+			 * the variable name supplied is used as a key to the variables hash
+			 * */
+//			cout << "getVariable " << varname  << " : " << variables[varname].getFloat()<< "\n";
+//			cout << "getVariable " << varname  << ", type : " << variables[varname].getType()<< "\n";
+//			return variables[varname].getFloat();
+			variables_t::const_iterator vi=variables.find(varname);
+			if(vi!=variables.end()) return vi->second.getString();
+			else return 0.0;
 		}
 
 		fim::string Namespace::getStringVariable(const fim::string &varname)const
 		{
-			fim::string retval = FIM_CNS_EMPTY_RESULT;
-			variables_t::const_iterator vi=variables_.find(varname);
-
-			if(vi!=variables_.end())
-				retval = vi->second.getString();
-			return retval;
+			/*
+			 * the variable name supplied is used as a key to the variables hash
+			 * */
+//			std::cout << "NSGSV:"<<varname<<"\n";
+			//return variables[varname].getString();
+			variables_t::const_iterator vi=variables.find(varname);
+			if(vi!=variables.end())
+			{
+//				std::cout << "NSGSV:"<<vi->second.getString()<<"\n";
+				return vi->second.getString();
+			}
+			else return "";
 		}
 
-	        fim_float_t Namespace::setGlobalVariable(const fim::string& varname,fim_float_t value)
+	        float Namespace::setGlobalVariable(const fim::string& varname,float value)
 		{
-			FIM_NS_SV(varname,value);
-			return FIM_CNS_EMPTY_FP_VAL;
+			return cc.setVariable(varname,value);
 		}
 
-		fim_int Namespace::setGlobalVariable(const fim::string& varname,fim_int value)
+		int Namespace::setGlobalVariable(const fim::string& varname,int value)
 		{
-			FIM_NS_SV(varname,value);
-			return FIM_CNS_EMPTY_INT_VAL;
+			return cc.setVariable(varname,value);
 		}
 
-		fim_int Namespace::setGlobalVariable(const fim::string& varname,const fim_char_t*value)
+		int Namespace::setGlobalVariable(const fim::string& varname,const char*value)
 		{
-			FIM_NS_SV(varname,value);
-			return FIM_CNS_EMPTY_INT_VAL;
+			return cc.setVariable(varname,value);
 		}
 
-		fim_int Namespace::getGlobalIntVariable(const fim::string &varname)const
+		int Namespace::getGlobalIntVariable(const fim::string &varname)const
 		{
-			/* FIXME: need a better solution here ! */
-#ifndef FIM_INDIPENDENT_NAMESPACE
-			if(rnsp_)
-				return rnsp_->getIntVariable(varname);
-#endif /* FIM_INDIPENDENT_NAMESPACE */
-			return FIM_CNS_EMPTY_INT_VAL;
+			return cc.getIntVariable(varname);
 		}
 
-		fim_float_t Namespace::getGlobalFloatVariable(const fim::string &varname)const
+		float Namespace::getGlobalFloatVariable(const fim::string &varname)
 		{
-			/* FIXME: need a better solution here ! */
-#ifndef FIM_INDIPENDENT_NAMESPACE
-			if(rnsp_)
-				return rnsp_->getFloatVariable(varname);
-#endif /* FIM_INDIPENDENT_NAMESPACE */
-			return FIM_CNS_EMPTY_FP_VAL;
+			return cc.getFloatVariable(varname);
 		}
 
-		fim::string Namespace::getGlobalStringVariable(const fim::string &varname)const
+		fim::string Namespace::getGlobalStringVariable(const fim::string &varname)
 		{
-			/* FIXME: need a better solution here ! */
-#ifndef FIM_INDIPENDENT_NAMESPACE
-			if(rnsp_)
-				return rnsp_->getStringVariable(varname);
-#endif /* FIM_INDIPENDENT_NAMESPACE */
-			return FIM_CNS_EMPTY_RESULT;
+			return cc.getStringVariable(varname);
 		}
 
 		fim::string Namespace::autocmd_exec(const fim::string &event,const fim::string &fname)
 		{
 #ifdef FIM_AUTOCMDS
-			/* FIXME: need a better solution here ! */
-#ifndef FIM_INDIPENDENT_NAMESPACE
-			if(rnsp_)
-				return rnsp_->autocmd_exec(event,fname);
-#endif /* FIM_INDIPENDENT_NAMESPACE */
-			return FIM_CNS_EMPTY_RESULT;
-#else /* FIM_AUTOCMDS */
-			return FIM_CNS_EMPTY_RESULT;
-#endif /* FIM_AUTOCMDS */
+			return cc.autocmd_exec(event,fname);
+#else
+			return "";
+#endif
 		}
-
-		fim::string Namespace::get_variables_list(bool with_values)const
-		{
-			fim::string acl;
-			variables_t::const_iterator vi;
-
-			for( vi=variables_.begin();vi!=variables_.end();++vi)
-			{
-				if(ns_char_!=FIM_SYM_NULL_NAMESPACE_CHAR)
-				{
-					acl+=ns_char_;
-					acl+=FIM_SYM_NAMESPACE_SEP;
-				}
-				acl+=((*vi).first);
-				acl+=" ";
-				if(with_values)
-					acl+=" = ",
-					acl+=((*vi).second.getString()),
-				       	acl+="\n";
-			}
-			return acl;
-		}
-
-		fim_err_t Namespace::find_matching_list(fim::string cmd, args_t & completions, bool prepend_ns)const
-		{
-			for(variables_t::const_iterator vi=variables_.begin();vi!=variables_.end();++vi)
-			{
-				if((vi->first).find(cmd)==0)
-				{
-					fim::string res;
-					if(prepend_ns)
-						res+=ns_char_,res+=FIM_SYM_NAMESPACE_SEP;
-					res+=(*vi).first;
-					completions.push_back(res);
-				}
-			}
-			return FIM_ERR_NO_ERROR;
-		}
-
-	std::ostream& Namespace::print(std::ostream &os)const
-	{
-		return os << this->get_variables_list(true);
-	}
-
-	std::ostream& operator<<(std::ostream &os, const Namespace & ns)
-	{
-		return ns.print(os);
-	}
 }
 

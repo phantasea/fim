@@ -1,8 +1,8 @@
-/* $LastChangedDate: 2015-01-24 00:09:38 +0100 (Sat, 24 Jan 2015) $ */
+/* $Id: FbiStuffGif.cpp 271 2009-12-13 00:03:48Z dezperado $ */
 /*
  FbiStuffGif.cpp : fbi functions for GIF files, modified for fim
 
- (c) 2008-2015 Michele Martone
+ (c) 2008-2009 Michele Martone
  (c) 1998-2006 Gerd Knorr <kraxel@bytesex.org>
 
     This program is free software; you can redistribute it and/or modify
@@ -32,78 +32,32 @@
 #include "FbiStuff.h"
 #include "FbiStuffLoader.h"
 
-#if defined(GIFLIB_MAJOR) && (GIFLIB_MAJOR >= 5)
-#define FIM_GIFLIB_STATE_HAS_ERRCODE 1
-#else
-#define FIM_GIFLIB_STATE_HAS_ERRCODE 0
-#endif
-
-#if defined(GIFLIB_MAJOR) && ((GIFLIB_MAJOR> 4) || ((GIFLIB_MAJOR==4) && defined(GIFLIB_MINOR) && (GIFLIB_MINOR>=2)))
-#define FIM_GIFLIB_RETIRED_PrintGifError 1
-#else
-#define FIM_GIFLIB_RETIRED_PrintGifError 0
-#endif
-
-#if defined(GIFLIB_MAJOR) && ((GIFLIB_MAJOR> 5) || ((GIFLIB_MAJOR==5) && defined(GIFLIB_MINOR) && (GIFLIB_MINOR>=1)))
-#define FIM_DGifCloseFile_ARG ,NULL
-#else
-#define FIM_DGifCloseFile_ARG
-#endif
 
 namespace fim
 {
+
+
 struct gif_state {
     FILE         *infile;
     GifFileType  *gif;
     GifPixelType *row;
     GifPixelType *il;
     int w,h;
-    int ErrorCode; /* used by newer versions (e.g.: >= 5) of library */
 };
-
-#if FIM_GIFLIB_RETIRED_PrintGifError  
-void
-FimPrintGifError(struct gif_state * gs) {
-#if defined(GIFLIB_MAJOR) && (GIFLIB_MAJOR==4) && defined(GIFLIB_MINOR) && (GIFLIB_MINOR>=2)
-    int ErrorCode = GifError();// introduced in 4.2, removed in 5.0
-#else
-    int ErrorCode = gs->gif->Error;
-#endif
-    /* On the basis of giflib-5.0.5/util/qprintf.c suggestion, after retirement of PrintGifError  */
-    const char *Err = NULL;
-
-    if(ErrorCode == 0)   
-	    return;
-
-#if ( defined(GIFLIB_MAJOR) && (GIFLIB_MAJOR >= 5) )
-    Err = GifErrorString(ErrorCode);// Introduced in 4.2; argument from 5.0.0.
-#else
-    Err = GifErrorString();// introduced in 4.2
-#endif
-                                                                                                                              
-    if (Err != NULL)
-        fprintf(stderr, "GIF-LIB error: %s.\n", Err);
-    else
-        fprintf(stderr, "GIF-LIB undefined error %d.\n", ErrorCode);
-}
-#else
-	/* Version 4.2 retired the PrintGifError function. */
-#define FimPrintGifError(GS) PrintGifError
-#endif /* FIM_GIFLIB_RETIRED_PrintGifError */
 
 static GifRecordType
 gif_fileread(struct gif_state *h)
 {
     GifRecordType RecordType;
-    GifByteType *Extension = NULL;
-    int ExtCode = 0, rc = 0;
-    const fim_char_t *type = NULL;
+    GifByteType *Extension;
+    int ExtCode, rc;
+    const char *type;
 
     for (;;) {
 	if (GIF_ERROR == DGifGetRecordType(h->gif,&RecordType)) {
 	    if (FbiStuff::fim_filereading_debug())
 		FIM_FBI_PRINTF("gif: DGifGetRecordType failed\n");
-	    FimPrintGifError(h);
+	    PrintGifError();
 	    return (GifRecordType)-1;
 	}
 	switch (RecordType) {
@@ -120,7 +74,7 @@ gif_fileread(struct gif_state *h)
 		if (rc == GIF_ERROR) {
 		    if (FbiStuff::fim_filereading_debug())
 			FIM_FBI_PRINTF("gif: DGifGetExtension failed\n");
-		    FimPrintGifError(h);
+		    PrintGifError();
 		    return (GifRecordType)-1;
 		}
 		if (FbiStuff::fim_filereading_debug()) {
@@ -151,7 +105,7 @@ gif_fileread(struct gif_state *h)
 static void
 gif_skipimage(struct gif_state *h)
 {
-    fim_byte_t *line;
+    unsigned char *line;
     int i;
 
     if (FbiStuff::fim_filereading_debug())
@@ -165,23 +119,19 @@ gif_skipimage(struct gif_state *h)
 #endif
 
 static void*
-gif_init(FILE *fp, const fim_char_t *filename, unsigned int page,
+gif_init(FILE *fp, char *filename, unsigned int page,
 	 struct ida_image_info *info, int thumbnail)
 {
-    struct gif_state *h = NULL;
+    struct gif_state *h;
     GifRecordType RecordType;
     int i, image = 0;
     
-    h = (gif_state*)fim_calloc(1,sizeof(*h));
+    h = (gif_state*)fim_calloc(sizeof(*h),1);
     if(!h)goto oops;
+    memset(h,0,sizeof(*h));
 
     h->infile = fp;
-#if FIM_GIFLIB_STATE_HAS_ERRCODE
-    h->gif = DGifOpenFileHandle(fileno(fp),&h->ErrorCode);	/* TODO: shall make use of h->ErrorCode */
-#else
     h->gif = DGifOpenFileHandle(fileno(fp));
-#endif
-    if(!h->gif)goto oops; /* opening gifs from stdin seems to cause DGifOpenFileHandle=NULL */
     h->row = (GifPixelType*)fim_malloc(h->gif->SWidth * sizeof(GifPixelType));
     if(!h->row)goto oops;
 
@@ -192,7 +142,7 @@ gif_init(FILE *fp, const fim_char_t *filename, unsigned int page,
 	    if (GIF_ERROR == DGifGetImageDesc(h->gif)) {
 		if (FbiStuff::fim_filereading_debug())
 		    FIM_FBI_PRINTF("gif: DGifGetImageDesc failed\n");
-		FimPrintGifError(h);
+		PrintGifError();
 	    }
 	    if (NULL == h->gif->SColorMap &&
 		NULL == h->gif->Image.ColorMap) {
@@ -243,11 +193,7 @@ gif_init(FILE *fp, const fim_char_t *filename, unsigned int page,
  oops:
     if (FbiStuff::fim_filereading_debug())
 	FIM_FBI_PRINTF("gif: fatal error, aborting\n");
-    if(h->gif);
-    {
-    	DGifCloseFile(h->gif FIM_DGifCloseFile_ARG);
-        fim_free(h->gif);
-    }
+    DGifCloseFile(h->gif);
     fclose(h->infile);
     if(h && h->il )fim_free(h->il );
     if(h && h->row)fim_free(h->row);
@@ -256,7 +202,7 @@ gif_init(FILE *fp, const fim_char_t *filename, unsigned int page,
 }
 
 static void
-gif_read(fim_byte_t *dst, unsigned int line, void *data)
+gif_read(unsigned char *dst, unsigned int line, void *data)
 {
     struct gif_state *h = (struct gif_state *) data;
     GifColorType *cmap;
@@ -288,7 +234,7 @@ gif_done(void *data)
 
     if (FbiStuff::fim_filereading_debug())
 	FIM_FBI_PRINTF("gif: done, cleaning up\n");
-    DGifCloseFile(h->gif FIM_DGifCloseFile_ARG);
+    DGifCloseFile(h->gif);
     fclose(h->infile);
     if (h->il)
 	fim_free(h->il);
@@ -308,7 +254,7 @@ static struct ida_loader gif_loader = {
 
 static void __init init_rd(void)
 {
-    fim_load_register(&gif_loader);
+    load_register(&gif_loader);
 }
 
 }

@@ -1,8 +1,8 @@
-/* $LastChangedDate: 2015-01-23 19:16:51 +0100 (Fri, 23 Jan 2015) $ */
+/* $Id: FramebufferDevice.cpp 269 2009-12-08 23:45:10Z dezperado $ */
 /*
  FramebufferDevice.cpp : Linux Framebuffer functions from fbi, adapted for fim
 
- (c) 2007-2014 Michele Martone
+ (c) 2007-2009 Michele Martone
  (c) 1998-2006 Gerd Knorr <kraxel@bytesex.org>
 
     This program is free software; you can redistribute it and/or modify
@@ -28,30 +28,19 @@
 
 #ifdef FIM_WITH_NO_FRAMEBUFFER
 static void foo(){} /* let's make our compiler happy */
-#else /* FIM_WITH_NO_FRAMEBUFFER */
+#else
 
+#include <sys/user.h>	//  for PAGE_MASK (sometimes it is needed to include it here explicitly)
 #if HAVE_LINUX_KD_H 
-#	include <linux/kd.h>	// KDGETMODE, KDSETMODE, KD_GRAPHICS, ...
-#endif /* HAVE_LINUX_KD_H  */
+#include <linux/kd.h>	// KDGETMODE, KDSETMODE, KD_GRAPHICS, ...
+#endif
 #if HAVE_LINUX_VT_H 
-#	include <linux/vt.h>	// VT_GETSTATE, .. 
-#endif /* HAVE_LINUX_VT_H  */
-#ifdef HAVE_SYS_USER_H
-#	include <sys/user.h>	//  for PAGE_MASK (sometimes it is needed to include it here explicitly)
-#else /* HAVE_SYS_USER_H */
-#	error missing <sys/user.h> !
-#endif /* HAVE_SYS_USER_H */
-#ifdef HAVE_SYS_MMAN_H
-#	include <sys/mman.h>	// PROT_READ, PROT_WRITE, MAP_SHARED
-#else /* HAVE_SYS_MMAN_H */
-#	error missing <sys/mman.h> !
-#endif /* HAVE_SYS_MMAN_H */
+#include <linux/vt.h>	// VT_GETSTATE, .. 
+#endif
+#include <sys/user.h>	// PAGE_MASK, ... 
+#include <sys/mman.h>	// PROT_READ, PROT_WRITE, MAP_SHARED
 #include <signal.h>
-#ifdef HAVE_SYS_IOCTL_H
-#	include <sys/ioctl.h>
-#else /* HAVE_SYS_IOCTL_H */
-#	error missing <sys/ioctl.h> !
-#endif /* HAVE_SYS_IOCTL_H */
+#include <sys/ioctl.h>
 
 //#include <errno.h>
 //#include <sys/ioctl.h>
@@ -70,9 +59,6 @@ namespace fim
 {
 
 #define	FIM_DEBUGGING_FOR_ARM_WITH_VITALY 0
-#define FIM_FBI_FB_MODES_LINE_BUFSIZE	80
-#define FIM_FBI_FB_MODES_LABEL_BUFSIZE	32
-#define FIM_FBI_FB_MODES_VALUE_BUFSIZE	16
 /*
    this code will be enabled by default if we can make sure it
    won't break often with kernel updates */
@@ -112,7 +98,7 @@ static void print_vinfo(struct fb_var_screeninfo *vinfo)
 static void print_finfo(struct fb_fix_screeninfo *finfo)
 {
 	FIM_FPRINTF(stderr,  "Printing finfo:\n");
-	FIM_FPRINTF(stderr,  "\tsmem_start = %p\n", (void *)finfo->smem_start);
+	FIM_FPRINTF(stderr,  "\tsmem_start = %p\n", (char *)finfo->smem_start);
 	FIM_FPRINTF(stderr,  "\tsmem_len = %d\n", finfo->smem_len);
 	FIM_FPRINTF(stderr,  "\ttype = %d\n", finfo->type);
 	FIM_FPRINTF(stderr,  "\ttype_aux = %d\n", finfo->type_aux);
@@ -121,16 +107,18 @@ static void print_finfo(struct fb_fix_screeninfo *finfo)
 	FIM_FPRINTF(stderr,  "\typanstep = %d\n", finfo->ypanstep);
 	FIM_FPRINTF(stderr,  "\tywrapstep = %d\n", finfo->ywrapstep);
 	FIM_FPRINTF(stderr,  "\tline_length = %d\n", finfo->line_length);
-	FIM_FPRINTF(stderr,  "\tmmio_start = %p\n", (void *)finfo->mmio_start);
+	FIM_FPRINTF(stderr,  "\tmmio_start = %p\n", (char *)finfo->mmio_start);
 	FIM_FPRINTF(stderr,  "\tmmio_len = %d\n", finfo->mmio_len);
 	FIM_FPRINTF(stderr,  "\taccel = %d\n", finfo->accel);
 }
-#endif /* FIM_DEBUGGING_FOR_ARM_WITH_VITALY */
+#endif
 
 #define DITHER_LEVEL 8
 
 typedef unsigned long vector[DITHER_LEVEL];
 typedef vector  matrix[DITHER_LEVEL];
+
+
 
 //#if DITHER_LEVEL == 8 ||  DITHER_LEVEL == 4
 //static int matrix   DM ;
@@ -149,7 +137,7 @@ static matrix   DM =
     {63, 31, 55, 23, 61, 29, 53, 21}
 };
 
-#endif /* DITHER_LEVEL  */
+#endif
 
 #if DITHER_LEVEL == 4
 #define DITHER_MASK 3
@@ -161,7 +149,7 @@ static matrix   DM =
     {15, 7, 13, 5}
 };
 
-#endif /* DITHER_LEVEL  */
+#endif
 
 
 
@@ -175,52 +163,51 @@ static void _fb_switch_signal(int signal)
 	ffdp->fb_switch_signal(signal);
 }
 
-fim_err_t FramebufferDevice::fs_puts(struct fs_font *f_, fim_coo_t x, fim_coo_t y, const fim_char_t *str)
+int FramebufferDevice::fs_puts(struct fs_font *f, unsigned int x, unsigned int y, const unsigned char *str)
 {
-    fim_byte_t *pos,*start;
+    unsigned char *pos,*start;
     int i,c,j,w;
 
-    pos  = fb_mem_+fb_mem_offset_;
-    pos += fb_fix_.line_length * y;
+    pos  = fb_mem+fb_mem_offset;
+    pos += fb_fix.line_length * y;
     for (i = 0; str[i] != '\0'; i++) {
-	c = (fim_byte_t)str[i];
-	if (NULL == f_->eindex[c])
+	c = str[i];
+	if (NULL == f->eindex[c])
 	    continue;
 	/* clear with bg color */
-	start = pos + x*fs_bpp_ + f_->fontHeader.max_bounds.descent * fb_fix_.line_length;
-	w = (f_->eindex[c]->width+1)*fs_bpp_;
+	start = pos + x*fs_bpp + f->fontHeader.max_bounds.descent * fb_fix.line_length;
+	w = (f->eindex[c]->width+1)*fs_bpp;
 #ifdef FIM_IS_SLOWER_THAN_FBI
-	for (j = 0; j < f_->height; j++) {
+	for (j = 0; j < f->height; j++) {
 /////	    memset_combine(start,0x20,w);
-	    fim_bzero(start,w);
-	    start += fb_fix_.line_length;
+	    memset(start,0,w);
+	    start += fb_fix.line_length;
 	}
-#else /* FIM_IS_SLOWER_THAN_FBI */
+#else
 	//sometimes we can gather multiple calls..
-	if(fb_fix_.line_length==(unsigned int)w)
+	if(fb_fix.line_length==(unsigned int)w)
 	{
 		//contiguous case
-		fim_bzero(start,w*f_->height);
-	    	start += fb_fix_.line_length*f_->height;
+		memset(start,0,w*f->height);
+	    	start += fb_fix.line_length*f->height;
 	}
 	else
-	for (j = 0; j < f_->height; j++) {
-	    fim_bzero(start,w);
-	    start += fb_fix_.line_length;
+	for (j = 0; j < f->height; j++) {
+	    memset(start,0,w);
+	    start += fb_fix.line_length;
 	}
-#endif /* FIM_IS_SLOWER_THAN_FBI */
-	/* draw character */
-	start = pos + x*fs_bpp_ + fb_fix_.line_length * (f_->height-f_->eindex[c]->ascent);
-	fs_render_fb(start,fb_fix_.line_length,f_->eindex[c],f_->gindex[c]);
-	x += f_->eindex[c]->width;
-	if (x > fb_var_.xres - f_->width)
-	    return FIM_ERR_GENERIC;
+#endif
+	/* draw char */
+	start = pos + x*fs_bpp + fb_fix.line_length * (f->height-f->eindex[c]->ascent);
+	fs_render_fb(start,fb_fix.line_length,f->eindex[c],f->gindex[c]);
+	x += f->eindex[c]->width;
+	if (x > fb_var.xres - f->width)
+	    return -1;
     }
-    //return x;//FIXME
-	return FIM_ERR_NO_ERROR;
+    return x;
 }
 
-void FramebufferDevice::fs_render_fb(fim_byte_t *ptr, int pitch, FSXCharInfo *charInfo, fim_byte_t *data)
+void FramebufferDevice::fs_render_fb(unsigned char *ptr, int pitch, FSXCharInfo *charInfo, unsigned char *data)
 {
 
 /* 
@@ -229,7 +216,7 @@ void FramebufferDevice::fs_render_fb(fim_byte_t *ptr, int pitch, FSXCharInfo *ch
 #define BIT_ORDER       BitmapFormatBitOrderMSB
 #ifdef BYTE_ORDER
 #undef BYTE_ORDER
-#endif /* BYTE_ORDER */
+#endif
 #define BYTE_ORDER      BitmapFormatByteOrderMSB
 #define SCANLINE_UNIT   BitmapFormatScanlineUnit8
 #define SCANLINE_PAD    BitmapFormatScanlinePad8
@@ -251,8 +238,8 @@ void FramebufferDevice::fs_render_fb(fim_byte_t *ptr, int pitch, FSXCharInfo *ch
 	for (x = 0, bit = 0; bit < (charInfo->right - charInfo->left); bit++) {
 	    if (data[bit>>3] & fs_masktab[bit&7])
 		// WARNING !
-		fs_setpixel(ptr+x,fs_white_);
-	    x += fs_bpp_;
+		fs_setpixel(ptr+x,fs_white);
+	    x += fs_bpp;
 	}
 	data += bpr;
 	ptr += pitch;
@@ -268,23 +255,22 @@ void FramebufferDevice::fs_render_fb(fim_byte_t *ptr, int pitch, FSXCharInfo *ch
 }
 
 
-	fim_err_t FramebufferDevice::framebuffer_init(void)
+	int FramebufferDevice::framebuffer_init()
 	{
 		int rc=0;
-
 		//initialization of the framebuffer text
-		FontServer::fb_text_init1(fontname_,&f_);	// FIXME : move this outta here
+		FontServer::fb_text_init1(fontname,&f);	// FIXME : move this outta here
 		/*
-		 * will initialize with the user set (or default ones)
+		 * will initialized with the user set (or default ones)
 		 *  - framebuffer device
 		 *  - framebuffer mode
 		 *  - virtual terminal
 		 * */
-		fd_ = fb_init(fbdev_, fbmode_, vt_);
-		if(fd_==-1)
-			fd_ = fb_init(fbdev_, fbmode_, vt_,0xbabebabe==0xbabebabe);//maybe we are under screen..
-		if(fd_==-1)
-			exit(1);
+		fd = fb_init(fbdev, fbmode, vt);
+		if(fd==-1)
+			fd = fb_init(fbdev, fbmode, vt,0xbabebabe==0xbabebabe);//maybe we are under screen..
+		if(fd==-1)
+			if(fd==-1)exit(1);
 			//return -1;//this is a TEMPORARY and DEAF,DUMB, AND BLIND bug noted by iam
 		//setting signals to handle in the right ways signals
 		fb_catch_exit_signals();
@@ -299,90 +285,88 @@ void FramebufferDevice::fs_render_fb(fim_byte_t *ptr, int pitch, FSXCharInfo *ch
 		//initialization of the framebuffer device handlers
 		if((rc=fb_text_init2()))return rc;
 	
-			switch (fb_var_.bits_per_pixel) {
+			switch (fb_var.bits_per_pixel) {
 		case 8:
 			svga_dither_palette(8, 8, 4);
-			dither_ = FIM_FBI_TRUE;
+			dither = TRUE;
 			init_dither(8, 8, 4, 2);
 			break;
 		case 15:
 	    	case 16:
-	        	if (fb_fix_.visual == FB_VISUAL_DIRECTCOLOR)
+	        	if (fb_fix.visual == FB_VISUAL_DIRECTCOLOR)
 	        	    linear_palette(5);
-			if (fb_var_.green.length == 5) {
+			if (fb_var.green.length == 5) {
 			    lut_init(15);
 			} else {
 			    lut_init(16);
 			}
 			break;
 		case 24:
-	        	if (fb_fix_.visual == FB_VISUAL_DIRECTCOLOR)
+	        	if (fb_fix.visual == FB_VISUAL_DIRECTCOLOR)
 	      	      linear_palette(8);
 			break;
 		case 32:
-	        	if (fb_fix_.visual == FB_VISUAL_DIRECTCOLOR)
+	        	if (fb_fix.visual == FB_VISUAL_DIRECTCOLOR)
 	          	  linear_palette(8);
 			lut_init(24);
 			break;
 		default:
 			FIM_FPRINTF(stderr,  "Oops: %i bit/pixel ???\n",
-				fb_var_.bits_per_pixel);
+				fb_var.bits_per_pixel);
 			std::exit(1);
 	    	}
-	    	if (fb_fix_.visual == FB_VISUAL_DIRECTCOLOR ||
-			fb_var_.bits_per_pixel == 8)
+	    	if (fb_fix.visual == FB_VISUAL_DIRECTCOLOR ||
+			fb_var.bits_per_pixel == 8)
 		{
-			if (-1 == ioctl(fd_,FBIOPUTCMAP,&cmap_)) {
-		    		fim_perror("ioctl FBIOPUTCMAP");
+			if (-1 == ioctl(fd,FBIOPUTCMAP,&cmap)) {
+		    		perror("ioctl FBIOPUTCMAP");
 			    std::exit(1);
 			}
 		}
-		return FIM_ERR_NO_ERROR;
+		return 0;
 	}
 
 void FramebufferDevice::dev_init(void)
 {
     struct stat dummy;
 
-    if (NULL != devices_)
+    if (NULL != devices)
 	return;
     if (0 == stat("/dev/.devfsd",&dummy))
-	devices_ = &devs_devfs_;
+	devices = &devs_devfs;
     else
-	devices_ = &devs_default_;
+	devices = &devs_default;
 
 }
 
 
-void FramebufferDevice::console_switch(fim_bool_t is_busy)
+void FramebufferDevice::console_switch(int is_busy)
 {
 	//FIXME
-	switch (fb_switch_state_) {
+	switch (fb_switch_state) {
 	case FB_REL_REQ:
 		fb_switch_release();
 	case FB_INACTIVE:
-		visible_ = 0;
+		visible = 0;
 	break;
 	case FB_ACQ_REQ:
 		fb_switch_acquire();
 	case FB_ACTIVE:
 		//when stepping in console..
-		visible_ = 1;
-		ioctl(fd_,FBIOPAN_DISPLAY,&fb_var_);
-		redraw_ = FIM_REDRAW_NECESSARY;
+		visible = 1;
+		ioctl(fd,FBIOPAN_DISPLAY,&fb_var);
+		redraw = 1;
 	/*
 	 * thanks to the next line, the image is redrawn each time 
 	 * the console is switched! 
 	 */
-#ifndef FIM_WANT_NO_OUTPUT_CONSOLE
-		mc_.cc_.redisplay();
-#endif /* FIM_WANT_NO_OUTPUT_CONSOLE */
+		mc.cc.redisplay();
 	//if (is_busy) status("busy, please wait ...", NULL);		
 	break;
 	default:
 	break;
     	}
-	switch_last_ = fb_switch_state_;
+	switch_last = fb_switch_state;
 	return;
 }
 
@@ -409,16 +393,15 @@ void FramebufferDevice::svga_display_image_new(
 	/*
 	 * WARNING : SHOULD ASSeRT BX+BW < FB_VAR.XReS ..!!
 	 * */
-    unsigned int     dwidth  = FIM_MIN(img->i.width,  bw);
-    unsigned int     dheight = FIM_MIN(img->i.height, bh);
+    unsigned int     dwidth  = MIN(img->i.width,  bw);
+    unsigned int     dheight = MIN(img->i.height, bh);
     unsigned int     data, video, bank, offset, bytes, y;
     int yo=(bh-dheight)/2;
     int xo=(bw-dwidth )/2;
     int cxo=bw-dwidth-xo;
     //int cyo=bh-yo;
     int mirror=flags&FIM_FLAG_MIRROR, flip=flags&FIM_FLAG_FLIP;
-
-    if (!visible_)/*COMMENT THIS IF svga_display_image IS NOT IN A CYCLE*/
+    if (!visible)/*COMMENT THIS IF svga_display_image IS NOT IN A CYCLE*/
 	return;
     /*fb_clear_screen();//EXPERIMENTAL
     if(xoff&&yoff)clear_rect(0,xoff,0,yoff);*/
@@ -436,17 +419,17 @@ void FramebufferDevice::svga_display_image_new(
 	    video += FB_BPP * (xo);
     }
     
-    video += fb_fix_.line_length * (by);
+    video += fb_fix.line_length * (by);
     if (img->i.height < bh )
     {	   
-	    video += fb_fix_.line_length * (yo);
+	    video += fb_fix.line_length * (yo);
     }
 
     if (dheight < bh ) 
     {	    
     	/* clear by lines */
 #ifdef FIM_FASTER_CLEARLINES
-	if(bw==fb_var_.xres && bx==0)
+	if(bw==fb_var.xres && bx==0)
 	{
 		/*
 		 * +------------------------------+
@@ -462,7 +445,7 @@ void FramebufferDevice::svga_display_image_new(
 		//{ clear_line(FB_BPP, by+dheight+yo, bw*(bh-yo-dheight), FB_MEM(bx,by+yo+dheight)); }
 	}
 	else
-#endif /* FIM_FASTER_CLEARLINES */
+#endif
 	{
 	    	for ( y = by; y < by+yo;++y) { clear_line(FB_BPP, y, bw, FB_MEM(bx,y)); }
 		for ( y = by+dheight+yo; y < by+bh;++y) { clear_line(FB_BPP, y, bw, FB_MEM(bx,y)); }
@@ -472,39 +455,38 @@ void FramebufferDevice::svga_display_image_new(
     if (dwidth < bw )
     {	    
 #ifdef FIM_FASTER_CLEARLINES
-    	    if(bw==fb_var_.xres && bx==0)
+    	    if(bw==fb_var.xres && bx==0)
 	    {
 	    	if (dheight >= bh ) 
 			clear_line(FB_BPP, by, bw*(bh), FB_MEM(bx,by));
 	    }
 	    else
-#endif /* FIM_FASTER_CLEARLINES */
+#endif
     	    for ( y = by; y < by+bh;++y)
 	    {
 		    clear_line(FB_BPP, y, xo, FB_MEM(bx,y));
 		    clear_line(FB_BPP, y, cxo,FB_MEM(bx+xo+dwidth,y));
 	    }
     }
-    /*for ( y = 0; y < fb_var_.yres;y+=100)fb_line(0, fb_var_.xres, y, y);*/
+    /*for ( y = 0; y < fb_var.yres;y+=100)fb_line(0, fb_var.xres, y, y);*/
 
     /* go ! */
     /*flip patch*/
 #ifndef min
 #define min(x,y) ((x)<(y)?(x):(y))
-#endif /* min */
-    //int fb_fix_line_length=FB_MEM_LINE_OFFSET;
-    int fb_fix_line_length=fb_fix_.line_length;
-    if(flip) {	fb_fix_line_length*=-1; video += (min(img->i.height,dheight)-1)*(fb_fix_.line_length);}
+#endif
+    int fb_fix_line_length=FB_MEM_LINE_OFFSET;
+    if(flip) {	fb_fix_line_length*=-1; video += (min(img->i.height,dheight)-1)*(fb_fix.line_length);}
     /*flip patch*/
     /* FIXME : COMPLETE ME ... */
 
 #ifndef FIM_IS_SLOWER_THAN_FBI
-    fim_byte_t *(FramebufferDevice::*convert_line_f)(int , int , int , fim_byte_t *, fim_byte_t *, int );
-    if(fb_var_.bits_per_pixel==8)
+    unsigned char *(FramebufferDevice::*convert_line_f)(int , int , int , char unsigned *, char unsigned *, int );
+    if(fb_var.bits_per_pixel==8)
  	   convert_line_f=&fim::FramebufferDevice::convert_line_8;
     else
  	   convert_line_f=&fim::FramebufferDevice::convert_line;
-#endif /* FIM_IS_SLOWER_THAN_FBI */
+#endif
 
     for (data = 0, y = by;
 	 data < img->i.width * img->i.height * 3
@@ -515,13 +497,13 @@ void FramebufferDevice::svga_display_image_new(
 	(this->*convert_line_f)
 #else
 	convert_line
-#endif /* FIM_IS_SLOWER_THAN_FBI */
-	(fb_var_.bits_per_pixel, y++, dwidth,
-		     fb_mem_+video, img->data + data + offset,mirror);/*<- mirror patch*/
+#endif
+	(fb_var.bits_per_pixel, y++, dwidth,
+		     fb_mem+video, img->data + data + offset,mirror);/*<- mirror patch*/
     }
 }
 
-int FramebufferDevice::fb_init(const fim_char_t *device, fim_char_t *mode, int vt_, int try_boz_patch)
+int FramebufferDevice::fb_init(const char *device, char *mode, int vt, int try_boz_patch)
 {
     /*
      * This method will probe for a valid framebuffer device.
@@ -530,18 +512,18 @@ int FramebufferDevice::fb_init(const fim_char_t *device, fim_char_t *mode, int v
      * Like the ones when running fim under screen.
      * Like the ones when running fim under X. :)
      * */
-    fim_char_t fbdev_[FIM_FBDEV_FILE_MAX_CHARS];
+    char   fbdev[16];
     struct vt_stat vts;
 
     dev_init();
-    tty_ = 0;
-    if (vt_ != 0)
-	fb_setvt(vt_);
+    tty = 0;
+    if (vt != 0)
+	fb_setvt(vt);
 
 #ifdef FIM_BOZ_PATCH
     if(!try_boz_patch)
-#endif /* FIM_BOZ_PATCH */
-    if (-1 == ioctl(tty_,VT_GETSTATE, &vts)) {
+#endif
+    if (-1 == ioctl(tty,VT_GETSTATE, &vts)) {
 	FIM_FPRINTF(stderr, "ioctl VT_GETSTATE: %s (not a linux console?)\n",
 		strerror(errno));
 	return -1;
@@ -550,78 +532,76 @@ int FramebufferDevice::fb_init(const fim_char_t *device, fim_char_t *mode, int v
     
     /* no device supplied ? we will probe for one */
     if (NULL == device) {
-	device = fim_getenv(FIM_ENV_FRAMEBUFFER);
+	device = fim_getenv("FRAMEBUFFER");
 	/* no environment - supplied device ? */
 	if (NULL == device) {
 	    struct fb_con2fbmap c2m;
-	    if (-1 == (fb_ = open(devices_->fb0,O_RDWR /* O_WRONLY */,0))) {
-		FIM_FPRINTF(stderr, "open %s: %s\n",devices_->fb0,strerror(errno));
-	        fim_perror(NULL);
+	    if (-1 == (fb = open(devices->fb0,O_RDWR /* O_WRONLY */,0))) {
+		FIM_FPRINTF(stderr, "open %s: %s\n",devices->fb0,strerror(errno));
 		exit(1);
 	    }
 	    c2m.console = vts.v_active;
 #ifdef FIM_BOZ_PATCH
     if(!try_boz_patch){
-#endif /* FIM_BOZ_PATCH */
-	    if (-1 == ioctl(fb_, FBIOGET_CON2FBMAP, &c2m)) {
-		fim_perror("ioctl FBIOGET_CON2FBMAP");
+#endif
+	    if (-1 == ioctl(fb, FBIOGET_CON2FBMAP, &c2m)) {
+		perror("ioctl FBIOGET_CON2FBMAP");
 		exit(1);
 	    }
-	    close(fb_);
+	    close(fb);
 /*	    FIM_FPRINTF(stderr, "map: vt%02d => fb%d\n",
 		    c2m.console,c2m.framebuffer);*/
-	    sprintf(fbdev_,devices_->fbnr,c2m.framebuffer);
-	    device = fbdev_;
+	    sprintf(fbdev,devices->fbnr,c2m.framebuffer);
+	    device = fbdev;
 #ifdef FIM_BOZ_PATCH
     	    }
     else
 	    device = "/dev/fb0";
-#endif /* FIM_BOZ_PATCH */
+#endif
 	}
     }
 
     /* get current settings (which we have to restore) */
-    if (-1 == (fb_ = open(device,O_RDWR /* O_WRONLY */))) {
+    if (-1 == (fb = open(device,O_RDWR /* O_WRONLY */))) {
 	FIM_FPRINTF(stderr, "open %s: %s\n",device,strerror(errno));
-	fim_perror(NULL);
 	exit(1);
     }
-    if (-1 == ioctl(fb_,FBIOGET_VSCREENINFO,&fb_ovar_)) {
-	fim_perror("ioctl FBIOGET_VSCREENINFO");
-	exit(1);
-    }
-#if	FIM_DEBUGGING_FOR_ARM_WITH_VITALY
-	print_vinfo(&fb_ovar_);
-#endif /* FIM_DEBUGGING_FOR_ARM_WITH_VITALY */
-    if (-1 == ioctl(fb_,FBIOGET_FSCREENINFO,&fb_fix_)) {
-	fim_perror("ioctl FBIOGET_FSCREENINFO");
+    if (-1 == ioctl(fb,FBIOGET_VSCREENINFO,&fb_ovar)) {
+	perror("ioctl FBIOGET_VSCREENINFO");
 	exit(1);
     }
 #if	FIM_DEBUGGING_FOR_ARM_WITH_VITALY
-	print_finfo(&fb_fix_);
-#endif /* FIM_DEBUGGING_FOR_ARM_WITH_VITALY */
-    if (fb_ovar_.bits_per_pixel == 8 ||
-	fb_fix_.visual == FB_VISUAL_DIRECTCOLOR) {
-	if (-1 == ioctl(fb_,FBIOGETCMAP,&ocmap_)) {
-	    fim_perror("ioctl FBIOGETCMAP");
+	print_vinfo(&fb_ovar);
+#endif
+    if (-1 == ioctl(fb,FBIOGET_FSCREENINFO,&fb_fix)) {
+	perror("ioctl FBIOGET_FSCREENINFO");
+	exit(1);
+    }
+#if	FIM_DEBUGGING_FOR_ARM_WITH_VITALY
+	print_finfo(&fb_fix);
+#endif
+    if (fb_ovar.bits_per_pixel == 8 ||
+	fb_fix.visual == FB_VISUAL_DIRECTCOLOR) {
+	if (-1 == ioctl(fb,FBIOGETCMAP,&ocmap)) {
+	    perror("ioctl FBIOGETCMAP");
 	    exit(1);
 	}
     }
 #ifdef FIM_BOZ_PATCH
     if(!try_boz_patch)
-#endif /* FIM_BOZ_PATCH */
-    if (-1 == ioctl(tty_,KDGETMODE, &kd_mode_)) {
-	fim_perror("ioctl KDGETMODE");
+#endif
+    if (-1 == ioctl(tty,KDGETMODE, &kd_mode)) {
+	perror("ioctl KDGETMODE");
 	exit(1);
     }
 #ifdef FIM_BOZ_PATCH
     if(!try_boz_patch)
-#endif /* FIM_BOZ_PATCH */
-    if (-1 == ioctl(tty_,VT_GETMODE, &vt_omode_)) {
-	fim_perror("ioctl VT_GETMODE");
+#endif
+    if (-1 == ioctl(tty,VT_GETMODE, &vt_omode)) {
+	perror("ioctl VT_GETMODE");
 	exit(1);
     }
-    tcgetattr(tty_, &term_);
+    tcgetattr(tty, &term);
     
     /* switch mode */
     if(-1 == fb_setmode(mode)){
@@ -631,9 +611,9 @@ int FramebufferDevice::fb_init(const fim_char_t *device, fim_char_t *mode, int v
 	 * mm's strict mode ckecking (right now, this function triggers an exit() but things should change) */
 #ifdef FIM_BOZ_PATCH
     	if(!try_boz_patch)
-#endif /* FIM_BOZ_PATCH */
+#endif
 	{
-		fim_perror("failed setting mode");
+		perror("failed setting mode");
 		exit(1);
 	}
 #endif
@@ -641,88 +621,85 @@ int FramebufferDevice::fb_init(const fim_char_t *device, fim_char_t *mode, int v
 
     
     /* checks & initialisation */
-    if (-1 == ioctl(fb_,FBIOGET_FSCREENINFO,&fb_fix_)) {
-	fim_perror("ioctl FBIOGET_FSCREENINFO");
+    if (-1 == ioctl(fb,FBIOGET_FSCREENINFO,&fb_fix)) {
+	perror("ioctl FBIOGET_FSCREENINFO");
 	exit(1);
     }
-    if (fb_fix_.type != FB_TYPE_PACKED_PIXELS) {
+    if (fb_fix.type != FB_TYPE_PACKED_PIXELS) {
 	FIM_FPRINTF(stderr, "can handle only packed pixel frame buffers\n");
 	goto err;
     }
 #if 0
-    switch (fb_var_.bits_per_pixel) {
+    switch (fb_var.bits_per_pixel) {
     case 8:
 	white = 255; black = 0; bpp = 1;
 	break;
     case 15:
     case 16:
-	if (fb_var_.green.length == 6)
+	if (fb_var.green.length == 6)
 	    white = 0xffff;
 	else
 	    white = 0x7fff;
 	black = 0; bpp = 2;
 	break;
     case 24:
-	white = 0xffffff; black = 0; bpp = fb_var_.bits_per_pixel/8;
+	white = 0xffffff; black = 0; bpp = fb_var.bits_per_pixel/8;
 	break;
     case 32:
-	white = 0xffffff; black = 0; bpp = fb_var_.bits_per_pixel/8;
+	white = 0xffffff; black = 0; bpp = fb_var.bits_per_pixel/8;
 	fb_setpixels = fb_setpixels4;
 	break;
     default:
 	FIM_FPRINTF(stderr,  "Oops: %i bit/pixel ???\n",
-		fb_var_.bits_per_pixel);
+		fb_var.bits_per_pixel);
 	goto err;
     }
 #endif
 #ifdef PAGE_MASK
-    fb_mem_offset_ = (unsigned int)(fb_fix_.smem_start) & (~PAGE_MASK);
-#else /* PAGE_MASK */
+    fb_mem_offset = (unsigned long)(fb_fix.smem_start) & (~PAGE_MASK);
+#else
     /* some systems don't have this symbol outside their kernel headers - will do any harm ? */
     /* FIXME : what are the wider implications of this ? */
-    fb_mem_offset_ = 0;
-#endif /* PAGE_MASK */
-    fb_mem_ = (fim_byte_t*) mmap(NULL,fb_fix_.smem_len+fb_mem_offset_,
-		  PROT_READ|PROT_WRITE,MAP_SHARED,fb_,0);
-#ifdef MAP_FAILED
-    if (fb_mem_ == MAP_FAILED) 
-#else
-    if (-1L == (long)fb_mem_)  /* TODO: remove this */
+    fb_mem_offset = 0;
 #endif
-    {
-	fim_perror("mmap failed");
+    fb_mem = (unsigned char*) mmap(NULL,fb_fix.smem_len+fb_mem_offset,
+		  PROT_READ|PROT_WRITE,MAP_SHARED,fb,0);
+    /*
+     * FIXME : this is not 64 bits safe
+     * */
+    if (-1L == (long)fb_mem) {
+	perror("mmap failed");
 	goto err;
     }
     /* move viewport to upper left corner */
-    if (fb_var_.xoffset != 0 || fb_var_.yoffset != 0) {
-	fb_var_.xoffset = 0;
-	fb_var_.yoffset = 0;
-	if (-1 == ioctl(fb_,FBIOPAN_DISPLAY,&fb_var_)) {
-	    fim_perror("ioctl FBIOPAN_DISPLAY");
+    if (fb_var.xoffset != 0 || fb_var.yoffset != 0) {
+	fb_var.xoffset = 0;
+	fb_var.yoffset = 0;
+	if (-1 == ioctl(fb,FBIOPAN_DISPLAY,&fb_var)) {
+	    perror("ioctl FBIOPAN_DISPLAY");
 	    goto err;
 	}
     }
 #ifdef FIM_BOZ_PATCH
     if(!try_boz_patch)
-#endif /* FIM_BOZ_PATCH */
-    if (-1 == ioctl(tty_,KDSETMODE, KD_GRAPHICS)) {
-	fim_perror("ioctl KDSETMODE");
+#endif
+    if (-1 == ioctl(tty,KDSETMODE, KD_GRAPHICS)) {
+	perror("ioctl KDSETMODE");
 	goto err;
     }
-    fb_activate_current(tty_);
+    fb_activate_current(tty);
 
     /* cls */
-    fb_memset(fb_mem_+fb_mem_offset_,0,fb_fix_.smem_len);
+    fb_memset(fb_mem+fb_mem_offset,0,fb_fix.smem_len);
 
 #ifdef FIM_BOZ_PATCH
-    with_boz_patch_=try_boz_patch;
-#endif /* FIM_BOZ_PATCH */
-    return fb_;
+    with_boz_patch=try_boz_patch;
+#endif
+    return fb;
 
  err:
     cleanup();
     exit(1);
-    return -1;
 }
 
 void FramebufferDevice::fb_memset (void *addr, int c, size_t len)
@@ -737,28 +714,28 @@ void FramebufferDevice::fb_memset (void *addr, int c, size_t len)
     unsigned int *p;
     for (p = (unsigned int*) addr; len--; p++)
 	*p = i;
-#else /* FIM_IS_SLOWER_THAN_FBI */
-    fim_memset(addr, i, len );
-#endif /* FIM_IS_SLOWER_THAN_FBI */
 #else
-    fim_memset(addr, c, len);
+    memset(addr, i, len );
+#endif
+#else
+    memset(addr, c, len);
 #endif
 }
 
 void FramebufferDevice::fb_setvt(int vtno)
 {
     struct vt_stat vts;
-    fim_char_t vtname[12];
+    char vtname[12];
     
     if (vtno < 0) {
-	if (-1 == ioctl(tty_,VT_OPENQRY, &vtno) || vtno == -1) {
-	    fim_perror("ioctl VT_OPENQRY");
+	if (-1 == ioctl(tty,VT_OPENQRY, &vtno) || vtno == -1) {
+	    perror("ioctl VT_OPENQRY");
 	    exit(1);
 	}
     }
 
     vtno &= 0xff;
-    sprintf(vtname, devices_->ttynr, vtno);
+    sprintf(vtname, devices->ttynr, vtno);
     if ( chown(vtname, getuid(), getgid())){
 	FIM_FPRINTF(stderr, "chown %s: %s\n",vtname,strerror(errno));
 	exit(1);
@@ -771,58 +748,48 @@ void FramebufferDevice::fb_setvt(int vtno)
     case 0:
 	break;
     case -1:
-	fim_perror("fork");
+	perror("fork");
 	exit(1);
     default:
 	exit(0);
     }
-    close(tty_);
+    close(tty);
     close(0);
     close(1);
     close(2);
     setsid();
-
-    	if( -1 == open(vtname,O_RDWR) )
-	{
-		fim_perror(NULL);
-	}
-	{
-		/* on some systems, we get 'int dup(int)', declared with attribute warn_unused_result */
-    		int ndd;
-    		ndd = dup(0);
-		ndd = dup(0);
-	}
+    open(vtname,O_RDWR);
+    int ndd;/* FIXME : on some systems, we get 'int dup(int)', declared with attribute warn_unused_result */
+    ndd=dup(0);
+    ndd=dup(0);
 
 #ifdef FIM_BOZ_PATCH
-    if(!with_boz_patch_)
-#endif /* FIM_BOZ_PATCH */
-    if (-1 == ioctl(tty_,VT_GETSTATE, &vts)) {
-	fim_perror("ioctl VT_GETSTATE");
+    if(!with_boz_patch)
+#endif
+    if (-1 == ioctl(tty,VT_GETSTATE, &vts)) {
+	perror("ioctl VT_GETSTATE");
 	exit(1);
     }
-    orig_vt_no_ = vts.v_active;
-    if (-1 == ioctl(tty_,VT_ACTIVATE, vtno)) {
-	fim_perror("ioctl VT_ACTIVATE");
+    orig_vt_no = vts.v_active;
+    if (-1 == ioctl(tty,VT_ACTIVATE, vtno)) {
+	perror("ioctl VT_ACTIVATE");
 	exit(1);
     }
-    if (-1 == ioctl(tty_,VT_WAITACTIVE, vtno)) {
-	fim_perror("ioctl VT_WAITACTIVE");
+    if (-1 == ioctl(tty,VT_WAITACTIVE, vtno)) {
+	perror("ioctl VT_WAITACTIVE");
 	exit(1);
     }
 }
 
-int FramebufferDevice::fb_setmode(fim_char_t *name)
+int FramebufferDevice::fb_setmode(char *name)
 {
     FILE *fp;
-    fim_char_t line[FIM_FBI_FB_MODES_LINE_BUFSIZE],
-	 label[FIM_FBI_FB_MODES_LABEL_BUFSIZE],
-	 value[FIM_FBI_FB_MODES_VALUE_BUFSIZE];
+    char line[80],label[32],value[16];
     int  geometry=0, timings=0;
-    int retval = 0;
  
     /* load current values */
-    if (-1 == ioctl(fb_,FBIOGET_VSCREENINFO,&fb_var_)) {
-	fim_perror("ioctl FBIOGET_VSCREENINFO");
+    if (-1 == ioctl(fb,FBIOGET_VSCREENINFO,&fb_var)) {
+	perror("ioctl FBIOGET_VSCREENINFO");
 	exit(1);
     }
     
@@ -835,188 +802,176 @@ int FramebufferDevice::fb_setmode(fim_char_t *name)
              * The following is experimental code only.
              * Note that on the developement machine neither fbset does work!
 	     */
-            fb_var_.xres_virtual = fb_var_.xres ;
-            fb_var_.yres_virtual = fb_var_.yres ;
-            fb_var_.yres_virtual = fb_var_.yres * 2;
-	    //printf("%d %d %d %d\n", fb_var_.xres_virtual,fb_var_.xres, fb_var_.yres_virtual,fb_var_.yres);
-	    fb_var_.activate = FB_ACTIVATE_NOW;
-            fb_var_.accel_flags = 0;
+            fb_var.xres_virtual = fb_var.xres ;
+            fb_var.yres_virtual = fb_var.yres ;
+            fb_var.yres_virtual = fb_var.yres * 2;
+	    //printf("%d %d %d %d\n", fb_var.xres_virtual,fb_var.xres, fb_var.yres_virtual,fb_var.yres);
+	    fb_var.activate = FB_ACTIVATE_NOW;
+            fb_var.accel_flags = 0;
             /* ... */
-	    if (-1 == ioctl(fb_,FBIOPUT_VSCREENINFO,&fb_var_))
-		fim_perror("ioctl FBIOPUT_VSCREENINFO"),printf("!failed\n");
-	    printf("%d %d %d %d\n", fb_var_.xres_virtual,fb_var_.xres, fb_var_.yres_virtual,fb_var_.yres);
+	    if (-1 == ioctl(fb,FBIOPUT_VSCREENINFO,&fb_var))
+		perror("ioctl FBIOPUT_VSCREENINFO"),printf("!failed\n");
+	    printf("%d %d %d %d\n", fb_var.xres_virtual,fb_var.xres, fb_var.yres_virtual,fb_var.yres);
 #endif
 #endif
     /* name="640x480-72"; */
 
     if (NULL == name)
-    {
-	goto err;
-    }
+	return -1;
     if (NULL == (fp = fopen("/etc/fb.modes","r")))
-    {
-	goto err;
-    }
-    while (NULL != fgets(line,FIM_FBI_FB_MODES_LINE_BUFSIZE-1,fp)) {
+	return -1;
+    while (NULL != fgets(line,79,fp)) {
 	if (1 == sscanf(line, "mode \"%31[^\"]\"",label) &&
 	    0 == strcmp(label,name)) {
 	    /* fill in new values */
-	    fb_var_.sync  = 0;
-	    fb_var_.vmode = 0;
-	    while (NULL != fgets(line,FIM_FBI_FB_MODES_LINE_BUFSIZE-1,fp) &&
+	    fb_var.sync  = 0;
+	    fb_var.vmode = 0;
+	    while (NULL != fgets(line,79,fp) &&
 		   NULL == strstr(line,"endmode")) {
 //		if (5 == sscanf(line," geometry %d %d %d %d %d",
 		if (5 == sscanf(line," geometry %u %u %u %u %u",
-				&fb_var_.xres,&fb_var_.yres,
-				&fb_var_.xres_virtual,&fb_var_.yres_virtual,
-				&fb_var_.bits_per_pixel))
+				&fb_var.xres,&fb_var.yres,
+				&fb_var.xres_virtual,&fb_var.yres_virtual,
+				&fb_var.bits_per_pixel))
 		    geometry = 1;
 //		if (7 == sscanf(line," timings %d %d %d %d %d %d %d",
 		if (7 == sscanf(line," timings %u %u %u %u %u %u %u",
-				&fb_var_.pixclock,
-				&fb_var_.left_margin,  &fb_var_.right_margin,
-				&fb_var_.upper_margin, &fb_var_.lower_margin,
-				&fb_var_.hsync_len,    &fb_var_.vsync_len))
+				&fb_var.pixclock,
+				&fb_var.left_margin,  &fb_var.right_margin,
+				&fb_var.upper_margin, &fb_var.lower_margin,
+				&fb_var.hsync_len,    &fb_var.vsync_len))
 		    timings = 1;
 		if (1 == sscanf(line, " hsync %15s",value) &&
 		    0 == strcasecmp(value,"high"))
-		    fb_var_.sync |= FB_SYNC_HOR_HIGH_ACT;
+		    fb_var.sync |= FB_SYNC_HOR_HIGH_ACT;
 		if (1 == sscanf(line, " vsync %15s",value) &&
 		    0 == strcasecmp(value,"high"))
-		    fb_var_.sync |= FB_SYNC_VERT_HIGH_ACT;
+		    fb_var.sync |= FB_SYNC_VERT_HIGH_ACT;
 		if (1 == sscanf(line, " csync %15s",value) &&
 		    0 == strcasecmp(value,"high"))
-		    fb_var_.sync |= FB_SYNC_COMP_HIGH_ACT;
+		    fb_var.sync |= FB_SYNC_COMP_HIGH_ACT;
 		if (1 == sscanf(line, " extsync %15s",value) &&
 		    0 == strcasecmp(value,"true"))
-		    fb_var_.sync |= FB_SYNC_EXT;
+		    fb_var.sync |= FB_SYNC_EXT;
 		if (1 == sscanf(line, " laced %15s",value) &&
 		    0 == strcasecmp(value,"true"))
-		    fb_var_.vmode |= FB_VMODE_INTERLACED;
+		    fb_var.vmode |= FB_VMODE_INTERLACED;
 		if (1 == sscanf(line, " double %15s",value) &&
 		    0 == strcasecmp(value,"true"))
-		    fb_var_.vmode |= FB_VMODE_DOUBLE;
+		    fb_var.vmode |= FB_VMODE_DOUBLE;
 	    }
 	    /* ok ? */
 	    if (!geometry || !timings)
-	    	goto err;
+		return -1;
 	    /* set */
-	    fb_var_.xoffset = 0;
-	    fb_var_.yoffset = 0;
+	    fb_var.xoffset = 0;
+	    fb_var.yoffset = 0;
 
 #if 0
 #ifdef FIM_WANTS_DOUBLE_BUFFERING
             // FIXME : the page flipping mechanisms missing (unfinished)
-            fb_var_.xres_virtual = fb_var_.xres;
-            fb_var_.yres_virtual = fb_var_.yres * 2;
+            fb_var.xres_virtual = fb_var.xres;
+            fb_var.yres_virtual = fb_var.yres * 2;
 #endif
 #endif
 
-	    if (-1 == ioctl(fb_,FBIOPUT_VSCREENINFO,&fb_var_))
-		fim_perror("ioctl FBIOPUT_VSCREENINFO");
+	    if (-1 == ioctl(fb,FBIOPUT_VSCREENINFO,&fb_var))
+		perror("ioctl FBIOPUT_VSCREENINFO");
 
 	    /*
 	     * FIXME
 	     * mm : this should be placed here and uncommented : */
 	    /*
-	    if (-1 == ioctl(fb_,FBIOGET_FSCREENINFO,&fb_fix_)) {
-		fim_perror("ioctl FBIOGET_VSCREENINFO");
+	    if (-1 == ioctl(fb,FBIOGET_FSCREENINFO,&fb_fix)) {
+		perror("ioctl FBIOGET_VSCREENINFO");
 		exit(1);
 	    }*/
 	    /* look what we have now ... */
-	    if (-1 == ioctl(fb_,FBIOGET_VSCREENINFO,&fb_var_)) {
-		fim_perror("ioctl FBIOGET_VSCREENINFO");
+	    if (-1 == ioctl(fb,FBIOGET_VSCREENINFO,&fb_var)) {
+		perror("ioctl FBIOGET_VSCREENINFO");
 		exit(1);
 	    }
-	    goto ret;
+	    return 0;
 	}
     }
-err:
     return -1;
-ret:
-    return 0;
 }
 
-int FramebufferDevice::fb_activate_current(int tty_)
+int FramebufferDevice::fb_activate_current(int tty)
 {
 /* Hmm. radeonfb needs this. matroxfb doesn't. (<- fbi comment) */
     struct vt_stat vts;
     
 #ifdef FIM_BOZ_PATCH
-    if(!with_boz_patch_)
-#endif /* FIM_BOZ_PATCH */
-    if (-1 == ioctl(tty_,VT_GETSTATE, &vts)) {
-	fim_perror("ioctl VT_GETSTATE");
-	goto err;
+    if(!with_boz_patch)
+#endif
+    if (-1 == ioctl(tty,VT_GETSTATE, &vts)) {
+	perror("ioctl VT_GETSTATE");
+	return -1;
     }
 #ifdef FIM_BOZ_PATCH
-    if(!with_boz_patch_)
-#endif /* FIM_BOZ_PATCH */
-    if (-1 == ioctl(tty_,VT_ACTIVATE, vts.v_active)) {
-	fim_perror("ioctl VT_ACTIVATE");
-	goto err;
+    if(!with_boz_patch)
+#endif
+    if (-1 == ioctl(tty,VT_ACTIVATE, vts.v_active)) {
+	perror("ioctl VT_ACTIVATE");
+	return -1;
     }
 #ifdef FIM_BOZ_PATCH
-    if(!with_boz_patch_)
-#endif /* FIM_BOZ_PATCH */
-    if (-1 == ioctl(tty_,VT_WAITACTIVE, vts.v_active)) {
-	fim_perror("ioctl VT_WAITACTIVE");
-	goto err;
+    if(!with_boz_patch)
+#endif
+    if (-1 == ioctl(tty,VT_WAITACTIVE, vts.v_active)) {
+	perror("ioctl VT_WAITACTIVE");
+	return -1;
     }
     return 0;
-err:
-	return -1;
 }
 
-fim_err_t FramebufferDevice::status_line(const fim_char_t *msg)
+int FramebufferDevice::status_line(const unsigned char *msg)
 {
     int y;
     
-    if (!visible_)
+    if (!visible)
 	goto ret;
 
-    if(fb_var_.yres< 1 + f_->height + ys_)
-	/* we need enough pixels, and have no assumptions on weird visualization devices_ */
+    if(fb_var.yres< 1 + f->height + ys)
+	/* we need enough pixels, and have no assumptions on weird visualization devices */
 	goto rerr;
 
-    y = fb_var_.yres -1 - f_->height - ys_;
-//    fb_memset(fb_mem_ + fb_fix_.line_length * y, 0, fb_fix_.line_length * (f_->height+ys_));
-    clear_rect(0, fb_var_.xres-1, y+1,y+f_->height+ys_);
+    y = fb_var.yres -1 - f->height - ys;
+//    fb_memset(fb_mem + fb_fix.line_length * y, 0, fb_fix.line_length * (f->height+ys));
+    clear_rect(0, fb_var.xres-1, y+1,y+f->height+ys);
 
-    fb_line(0, fb_var_.xres, y, y);
-    fs_puts(f_, 0, y+ys_, msg);
+    fb_line(0, fb_var.xres, y, y);
+    fs_puts(f, 0, y+ys, msg);
 ret:
-    return FIM_ERR_NO_ERROR;
+    return 0;
 rerr:
-    return FIM_ERR_GENERIC;
+    return -1;
 }
 
-#if 0
-/* 20110909 FIXME: unused */
-void FramebufferDevice::fb_edit_line(fim_byte_t *str, int pos)
+void FramebufferDevice::fb_edit_line(unsigned char *str, int pos)
 {
     int x,y;
     
-    if (!visible_)
+    if (!visible)
 	return;
 
-    y = fb_var_.yres - f_->height - ys_;
-    x = pos * f_->width;
-    fb_memset(fb_mem_ + fb_fix_.line_length * y, 0,
-	      fb_fix_.line_length * (f_->height+ys_));
-    fb_line(0, fb_var_.xres, y, y);
-    fs_puts(f_, 0, y+ys_, (const fim_char_t*)str);
-    fb_line(x, x + f_->width, fb_var_.yres-1, fb_var_.yres-1);
-    fb_line(x, x + f_->width, fb_var_.yres-2, fb_var_.yres-2);
+    y = fb_var.yres - f->height - ys;
+    x = pos * f->width;
+    fb_memset(fb_mem + fb_fix.line_length * y, 0,
+	      fb_fix.line_length * (f->height+ys));
+    fb_line(0, fb_var.xres, y, y);
+    fs_puts(f, 0, y+ys, str);
+    fb_line(x, x + f->width, fb_var.yres-1, fb_var.yres-1);
+    fb_line(x, x + f->width, fb_var.yres-2, fb_var.yres-2);
 }
-#endif
 
-void FramebufferDevice::fb_text_box(int x, int y, fim_char_t *lines[], unsigned int count)
+void FramebufferDevice::fb_text_box(int x, int y, char *lines[], unsigned int count)
 {
     unsigned int i,len,max, x1, x2, y1, y2;
 
-    if (!visible_)
-	goto err;
+    if (!visible)
+	return;
 
     max = 0;
     for (i = 0; i < count; i++) {
@@ -1025,21 +980,19 @@ void FramebufferDevice::fb_text_box(int x, int y, fim_char_t *lines[], unsigned 
 	    max = len;
     }
     x1 = x;
-    x2 = x + max * f_->width;
+    x2 = x + max * f->width;
     y1 = y;
-    y2 = y + count * f_->height;
+    y2 = y + count * f->height;
 
-    x += xs_; x2 += 2*xs_;
-    y += ys_; y2 += 2*ys_;
+    x += xs; x2 += 2*xs;
+    y += ys; y2 += 2*ys;
     
     clear_rect(x1, x2, y1, y2);
     fb_rect(x1, x2, y1, y2);
     for (i = 0; i < count; i++) {
-	fs_puts(f_,x,y,(const fim_char_t*)lines[i]);
-	y += f_->height;
+	fs_puts(f,x,y,(unsigned char*)lines[i]);
+	y += f->height;
     }
-err:
-	return;
 }
 
 void FramebufferDevice::fb_line(int x1, int x2, int y1,int y2)
@@ -1056,13 +1009,13 @@ void FramebufferDevice::fb_line(int x1, int x2, int y1,int y2)
 	inc = (float)(x2-x1)/(float)(y2-y1);
 	for (y = y1; y <= y2; y++) {
 	    x = x1 + (int)(inc * (float)(y - y1));
-	    fb_setpixel(x,y,fs_white_);
+	    fb_setpixel(x,y,fs_white);
 	}
     } else {
 	inc = (float)(y2-y1)/(float)(x2-x1);
 	for (x = x1; x <= x2; x++) {
 	    y = y1 + (int)(inc * (float)(x - x1));
-	    fb_setpixel(x,y,fs_white_);
+	    fb_setpixel(x,y,fs_white);
 	}
     }
 }
@@ -1078,98 +1031,96 @@ void FramebufferDevice::fb_rect(int x1, int x2, int y1,int y2)
 
 void FramebufferDevice::fb_setpixel(int x, int y, unsigned int color)
 {
-    fim_byte_t *ptr;
+    unsigned char *ptr;
 
-    ptr  = fb_mem_;
-    ptr += y * fb_fix_.line_length;
-    ptr += x * fs_bpp_;
+    ptr  = fb_mem;
+    ptr += y * fb_fix.line_length;
+    ptr += x * fs_bpp;
     fs_setpixel(ptr, color);
 }
 
 void FramebufferDevice::fb_clear_rect(int x1, int x2, int y1,int y2)
 {
-    fim_byte_t *ptr;
+    unsigned char *ptr;
     int y,h;
 
-    if (!visible_)
-	goto ret;
+    if (!visible)
+	return;
 
     if (x2 < x1)
 	h = x2, x2 = x1, x1 = h;
     if (y2 < y1)
 	h = y2, y2 = y1, y1 = h;
-    ptr  = fb_mem_;
-    ptr += y1 * fb_fix_.line_length;
-    ptr += x1 * fs_bpp_;
+    ptr  = fb_mem;
+    ptr += y1 * fb_fix.line_length;
+    ptr += x1 * fs_bpp;
 
     for (y = y1; y <= y2; y++) {
-	fb_memset(ptr, 0, (x2 - x1 + 1) * fs_bpp_ * 4 /* FIXME : 4 */);
-	ptr += fb_fix_.line_length;
+	fb_memset(ptr, 0, (x2 - x1 + 1) * fs_bpp * 4 /* FIXME : 4 */);
+	ptr += fb_fix.line_length;
     }
-ret:
-    return;
 }
 
 void FramebufferDevice::clear_screen(void)
 {
-    if (visible_)
-	fb_memset(fb_mem_,0,fb_fix_.smem_len);
+    if (visible)
+	fb_memset(fb_mem,0,fb_fix.smem_len);
 }
 
 void FramebufferDevice::cleanup(void)
 {
     /* restore console */
-    if (-1 == ioctl(fb_,FBIOPUT_VSCREENINFO,&fb_ovar_))
-	fim_perror("ioctl FBIOPUT_VSCREENINFO");
-    if (-1 == ioctl(fb_,FBIOGET_FSCREENINFO,&fb_fix_))
-	fim_perror("ioctl FBIOGET_FSCREENINFO");
+    if (-1 == ioctl(fb,FBIOPUT_VSCREENINFO,&fb_ovar))
+	perror("ioctl FBIOPUT_VSCREENINFO");
+    if (-1 == ioctl(fb,FBIOGET_FSCREENINFO,&fb_fix))
+	perror("ioctl FBIOGET_FSCREENINFO");
 #if 0
-    printf("id:%s\t%ld\t%ld\t%ld\t\n",fb_fix_.id,fb_fix_.accel,fb_fix_.xpanstep,fb_fix_.xpanstep);
+    printf("id:%s\t%ld\t%ld\t%ld\t\n",fb_fix.id,fb_fix.accel,fb_fix.xpanstep,fb_fix.xpanstep);
 #endif
-    if (fb_ovar_.bits_per_pixel == 8 ||
-	fb_fix_.visual == FB_VISUAL_DIRECTCOLOR) {
-	if (-1 == ioctl(fb_,FBIOPUTCMAP,&ocmap_))
-	    fim_perror("ioctl FBIOPUTCMAP");
+    if (fb_ovar.bits_per_pixel == 8 ||
+	fb_fix.visual == FB_VISUAL_DIRECTCOLOR) {
+	if (-1 == ioctl(fb,FBIOPUTCMAP,&ocmap))
+	    perror("ioctl FBIOPUTCMAP");
     }
-    close(fb_);
+    close(fb);
 
 #ifdef FIM_BOZ_PATCH
-    if(!with_boz_patch_)
-#endif /* FIM_BOZ_PATCH */
-    if (-1 == ioctl(tty_,KDSETMODE, kd_mode_))
-	fim_perror("ioctl KDSETMODE");
+    if(!with_boz_patch)
+#endif
+    if (-1 == ioctl(tty,KDSETMODE, kd_mode))
+	perror("ioctl KDSETMODE");
 #ifdef FIM_BOZ_PATCH
-    if(!with_boz_patch_)
-#endif /* FIM_BOZ_PATCH */
-    if (-1 == ioctl(tty_,VT_SETMODE, &vt_omode_))
-	fim_perror("ioctl VT_SETMODE");
-    if (orig_vt_no_ && -1 == ioctl(tty_, VT_ACTIVATE, orig_vt_no_))
-	fim_perror("ioctl VT_ACTIVATE");
-    if (orig_vt_no_ && -1 == ioctl(tty_, VT_WAITACTIVE, orig_vt_no_))
-	fim_perror("ioctl VT_WAITACTIVE");
+    if(!with_boz_patch)
+#endif
+    if (-1 == ioctl(tty,VT_SETMODE, &vt_omode))
+	perror("ioctl VT_SETMODE");
+    if (orig_vt_no && -1 == ioctl(tty, VT_ACTIVATE, orig_vt_no))
+	perror("ioctl VT_ACTIVATE");
+    if (orig_vt_no && -1 == ioctl(tty, VT_WAITACTIVE, orig_vt_no))
+	perror("ioctl VT_WAITACTIVE");
 
     // there's no need to restore the tty : this is performed outside ( 20081221 )
-    //tcsetattr(tty_, TCSANOW, &term_);
-    //close(tty_);
+    //tcsetattr(tty, TCSANOW, &term);
+    //close(tty);
 }
 
-fim_byte_t * FramebufferDevice::convert_line_8(int bpp, int line, int owidth, fim_byte_t *dst, fim_byte_t *buffer, int mirror)/*dez's mirror patch*/
+unsigned char * FramebufferDevice::convert_line_8(int bpp, int line, int owidth, char unsigned *dest, char unsigned *buffer, int mirror)/*dez's mirror patch*/
 {
-    fim_byte_t  *ptr  = (fim_byte_t *)dst;
+    unsigned char  *ptr  = (unsigned char *)dest;
 	dither_line(buffer, ptr, line, owidth, mirror);
 	ptr += owidth;
 	return ptr;
 }
 
-fim_byte_t * FramebufferDevice::convert_line(int bpp, int line, int owidth, fim_byte_t *dst, fim_byte_t *buffer, int mirror)/*dez's mirror patch*/
+unsigned char * FramebufferDevice::convert_line(int bpp, int line, int owidth, char unsigned *dest, char unsigned *buffer, int mirror)/*dez's mirror patch*/
 {
-    fim_byte_t  *ptr  = (fim_byte_t *)dst;
-    unsigned short *ptr2 = (unsigned short*)dst;
-    unsigned int  *ptr4 = (unsigned int *)dst;
+    unsigned char  *ptr  = (unsigned char *)dest;
+    unsigned short *ptr2 = (unsigned short*)dest;
+    unsigned long  *ptr4 = (unsigned long *)dest;
     int x;
     int xm;/*mirror patch*/
 
-    switch (fb_var_.bits_per_pixel) {
+    switch (fb_var.bits_per_pixel) {
     case 8:
 	dither_line(buffer, ptr, line, owidth, mirror);
 	ptr += owidth;
@@ -1180,27 +1131,27 @@ fim_byte_t * FramebufferDevice::convert_line(int bpp, int line, int owidth, fim_
 	/*swapped RGB patch*/
 	for (x = 0; x < owidth; x++) {
             xm=mirror?owidth-1-x:x;
-	    ptr2[xm] = lut_red_[buffer[x*3]] |
-		lut_green_[buffer[x*3+1]] |
-		lut_blue_[buffer[x*3+2]];
+	    ptr2[xm] = lut_red[buffer[x*3]] |
+		lut_green[buffer[x*3+1]] |
+		lut_blue[buffer[x*3+2]];
 	}
-#else /* FIM_IS_SLOWER_THAN_FBI */
+#else
 	if(FIM_LIKELY(!mirror))
 	for (x = 0; x < owidth; x++) {
-	    ptr2[x] = lut_red_[buffer[x*3+2]] |
-		lut_green_[buffer[x*3+1]] |
-		lut_blue_[buffer[x*3]];
+	    ptr2[x] = lut_red[buffer[x*3+2]] |
+		lut_green[buffer[x*3+1]] |
+		lut_blue[buffer[x*3]];
 	}
 	else
 	for (x = 0,xm=owidth; x < owidth; x++) {
             xm--;
-	    ptr2[xm] = lut_red_[buffer[x*3+2]] |
-		lut_green_[buffer[x*3+1]] |
-		lut_blue_[buffer[x*3]];
+	    ptr2[xm] = lut_red[buffer[x*3+2]] |
+		lut_green[buffer[x*3+1]] |
+		lut_blue[buffer[x*3]];
 	}
-#endif /* FIM_IS_SLOWER_THAN_FBI */
+#endif
 	ptr2 += owidth;
-	return (fim_byte_t*)ptr2;
+	return (unsigned char*)ptr2;
     case 24:
 #ifdef FIM_IS_SLOWER_THAN_FBI
 	for (x = 0; x < owidth; x++) {
@@ -1209,7 +1160,7 @@ fim_byte_t * FramebufferDevice::convert_line(int bpp, int line, int owidth, fim_
 	    ptr[3*xm+1] = buffer[3*x+1];
 	    ptr[3*xm+0] = buffer[3*x+2];
 	}
-#else /* FIM_IS_SLOWER_THAN_FBI */
+#else
 	/*swapped RGB patch*/
 	if(FIM_LIKELY(!mirror))
 	{
@@ -1230,7 +1181,7 @@ fim_byte_t * FramebufferDevice::convert_line(int bpp, int line, int owidth, fim_
 		 * this is far worse than the preceding !
 		 */
 		memcpy(ptr,buffer,owidth*3);
-		//register fim_char_t t;
+		//register char t;
 		//register i=x;
 		/*since RGB and GBR swap already done, this is not necessary*/
 		/*for (i = 0; i < owidth; i+=3)
@@ -1270,26 +1221,26 @@ fim_byte_t * FramebufferDevice::convert_line(int bpp, int line, int owidth, fim_
 	/*swapped RGB patch*/
 	for (x = 0; x < owidth; x++) {
             xm=mirror?owidth-1-x:x;
-	    ptr4[xm] = lut_red_[buffer[x*3+2]] |
-		lut_green_[buffer[x*3+1]] |
-		lut_blue_[buffer[x*3]];
+	    ptr4[xm] = lut_red[buffer[x*3+2]] |
+		lut_green[buffer[x*3+1]] |
+		lut_blue[buffer[x*3]];
 	}
-#else /* FIM_IS_SLOWER_THAN_FBI */
+#else
 	if(FIM_LIKELY(!mirror))
 	for (x = 0; x < owidth; x++) {
-	    ptr4[x] = lut_red_[buffer[x*3]] |
-		lut_green_[buffer[x*3+1]] |
-		lut_blue_[buffer[x*3+2]];
+	    ptr4[x] = lut_red[buffer[x*3]] |
+		lut_green[buffer[x*3+1]] |
+		lut_blue[buffer[x*3+2]];
 	}
 	else
 	for (x = 0; x < owidth; x++) {
-	    ptr4[owidth-1-x] = lut_red_[buffer[x*3]] |
-		lut_green_[buffer[x*3+1]] |
-		lut_blue_[buffer[x*3+2]];
+	    ptr4[owidth-1-x] = lut_red[buffer[x*3]] |
+		lut_green[buffer[x*3+1]] |
+		lut_blue[buffer[x*3+2]];
 	}
-#endif /* FIM_IS_SLOWER_THAN_FBI */
+#endif
 	ptr4 += owidth;
-	return (fim_byte_t*)ptr4;
+	return (unsigned char*)ptr4;
     default:
 	/* keep compiler happy */
 	return NULL;
@@ -1297,24 +1248,24 @@ fim_byte_t * FramebufferDevice::convert_line(int bpp, int line, int owidth, fim_
 }
 
 /*dez's*/
-/*fim_byte_t * FramebufferDevice::clear_lines(int bpp, int lines, int owidth, fim_byte_t *dst)
+/*unsigned char * FramebufferDevice::clear_lines(int bpp, int lines, int owidth, char unsigned *dest)
 {
 
 }*/
 
-fim_byte_t * FramebufferDevice::clear_line(int bpp, int line, int owidth, fim_byte_t *dst)
+unsigned char * FramebufferDevice::clear_line(int bpp, int line, int owidth, char unsigned *dest)
 {
-    fim_byte_t  *ptr  = (fim_byte_t*)dst;
-    unsigned short *ptr2 = (unsigned short*)dst;
-    unsigned int  *ptr4 = (unsigned int*)dst;
-    unsigned clear_byte=0x00;
+    unsigned char  *ptr  = (unsigned char*)dest;
+    unsigned short *ptr2 = (unsigned short*)dest;
+    unsigned long  *ptr4 = (unsigned long*)dest;
+    unsigned ZERO_BYTE=0x00;
 #ifdef FIM_IS_SLOWER_THAN_FBI
     int x;
-#endif /* FIM_IS_SLOWER_THAN_FBI */
+#endif
 
-    switch (fb_var_.bits_per_pixel) {
+    switch (fb_var.bits_per_pixel) {
     case 8:
-	fim_bzero(ptr, owidth);
+	bzero(ptr, owidth);
 	ptr += owidth;
 	return ptr;
     case 15:
@@ -1323,11 +1274,11 @@ fim_byte_t * FramebufferDevice::clear_line(int bpp, int line, int owidth, fim_by
 	for (x = 0; x < owidth; x++) {
 	    ptr2[x] = 0x0;
 	}
-#else /* FIM_IS_SLOWER_THAN_FBI */
-	fim_memset(ptr,clear_byte,2*owidth);
-#endif /* FIM_IS_SLOWER_THAN_FBI */
+#else
+	memset(ptr,ZERO_BYTE,2*owidth);
+#endif
 	ptr2 += owidth;
-	return (fim_byte_t*)ptr2;
+	return (unsigned char*)ptr2;
     case 24:
 #ifdef FIM_IS_SLOWER_THAN_FBI
 	for (x = 0; x < owidth; x++) {
@@ -1335,9 +1286,9 @@ fim_byte_t * FramebufferDevice::clear_line(int bpp, int line, int owidth, fim_by
 	    ptr[3*x+1] = 0x0;
 	    ptr[3*x+0] = 0x0;
 	}
-#else /* FIM_IS_SLOWER_THAN_FBI */
-	fim_memset(ptr,clear_byte,3*owidth);
-#endif /* FIM_IS_SLOWER_THAN_FBI */
+#else
+	memset(ptr,ZERO_BYTE,3*owidth);
+#endif
 	ptr += owidth * 3;
 	return ptr;
     case 32:
@@ -1345,11 +1296,11 @@ fim_byte_t * FramebufferDevice::clear_line(int bpp, int line, int owidth, fim_by
 	for (x = 0; x < owidth; x++) {
 	    ptr4[x] = 0x0;
 	}
-#else /* FIM_IS_SLOWER_THAN_FBI */
-	fim_memset(ptr,clear_byte,4*owidth);
-#endif /* FIM_IS_SLOWER_THAN_FBI */
+#else
+	memset(ptr,ZERO_BYTE,4*owidth);
+#endif
 	ptr4 += owidth;
-	return (fim_byte_t*)ptr4;
+	return (unsigned char*)ptr4;
     default:
 	/* keep compiler happy */
 	return NULL;
@@ -1359,15 +1310,15 @@ fim_byte_t * FramebufferDevice::clear_line(int bpp, int line, int owidth, fim_by
 void FramebufferDevice::init_dither(int shades_r, int shades_g, int shades_b, int shades_gray)
 {
     int             i, j;
-    fim_byte_t   low_shade, high_shade;
+    unsigned char   low_shade, high_shade;
     unsigned short  index;
     float           red_colors_per_shade;
     float           green_colors_per_shade;
     float           blue_colors_per_shade;
     float           gray_colors_per_shade;
 
-    red_mult_ = shades_g * shades_b;
-    green_mult_ = shades_b;
+    red_mult = shades_g * shades_b;
+    green_mult = shades_b;
 
     red_colors_per_shade = 256.0 / (shades_r - 1);
     green_colors_per_shade = 256.0 / (shades_g - 1);
@@ -1390,66 +1341,66 @@ void FramebufferDevice::init_dither(int shades_r, int shades_g, int shades_b, in
 
 	/*  setup the red information  */
 	{
-	    low_shade = (fim_byte_t) (i / red_colors_per_shade);
+	    low_shade = (unsigned char) (i / red_colors_per_shade);
 	    high_shade = low_shade + 1;
 
 	    index = (unsigned short)
 		(((i - low_shade * red_colors_per_shade) / red_colors_per_shade) *
 		 (DITHER_LEVEL * DITHER_LEVEL + 1));
 
-	    low_shade *= red_mult_;
-	    high_shade *= red_mult_;
+	    low_shade *= red_mult;
+	    high_shade *= red_mult;
 
-	    red_dither_[i] = (index << 16) + (high_shade << 8) + (low_shade);
+	    red_dither[i] = (index << 16) + (high_shade << 8) + (low_shade);
 	}
 
 	/*  setup the green information  */
 	{
-	    low_shade = (fim_byte_t) (i / green_colors_per_shade);
+	    low_shade = (unsigned char) (i / green_colors_per_shade);
 	    high_shade = low_shade + 1;
 
 	    index = (unsigned short)
 		(((i - low_shade * green_colors_per_shade) / green_colors_per_shade) *
 		 (DITHER_LEVEL * DITHER_LEVEL + 1));
 
-	    low_shade *= green_mult_;
-	    high_shade *= green_mult_;
+	    low_shade *= green_mult;
+	    high_shade *= green_mult;
 
-	    green_dither_[i] = (index << 16) + (high_shade << 8) + (low_shade);
+	    green_dither[i] = (index << 16) + (high_shade << 8) + (low_shade);
 	}
 
 	/*  setup the blue information  */
 	{
-	    low_shade = (fim_byte_t) (i / blue_colors_per_shade);
+	    low_shade = (unsigned char) (i / blue_colors_per_shade);
 	    high_shade = low_shade + 1;
 
 	    index = (unsigned short)
 		(((i - low_shade * blue_colors_per_shade) / blue_colors_per_shade) *
 		 (DITHER_LEVEL * DITHER_LEVEL + 1));
 
-	    blue_dither_[i] = (index << 16) + (high_shade << 8) + (low_shade);
+	    blue_dither[i] = (index << 16) + (high_shade << 8) + (low_shade);
 	}
 
 	/*  setup the gray information  */
 	{
-	    low_shade = (fim_byte_t) (i / gray_colors_per_shade);
+	    low_shade = (unsigned char) (i / gray_colors_per_shade);
 	    high_shade = low_shade + 1;
 
 	    index = (unsigned short)
 		(((i - low_shade * gray_colors_per_shade) / gray_colors_per_shade) *
 		 (DITHER_LEVEL * DITHER_LEVEL + 1));
 
-	    gray_dither_[i] = (index << 16) + (high_shade << 8) + (low_shade);
+	    gray_dither[i] = (index << 16) + (high_shade << 8) + (low_shade);
 	}
     }
 }
 
-void inline FramebufferDevice::dither_line(fim_byte_t *src, fim_byte_t *dst, int y, int width,int mirror)
+void inline FramebufferDevice::dither_line(unsigned char *src, unsigned char *dest, int y, int width,int mirror)
 {
     register long   a, b
 #ifndef FIM_IS_SLOWER_THAN_FBI
     __attribute((aligned(16)))
-#endif /* FIM_IS_SLOWER_THAN_FBI */
+#endif
     ;
 
     long           *ymod, xmod;
@@ -1457,10 +1408,9 @@ void inline FramebufferDevice::dither_line(fim_byte_t *src, fim_byte_t *dst, int
     ymod = (long int*) DM[y & DITHER_MASK];
     /*	mirror patch by dez	*/
     register const int inc=mirror?-1:1;
-    dst=mirror?dst+width-1:dst;
+    dest=mirror?dest+width-1:dest;
     /*	mirror patch by dez	*/
-    if(FIM_UNLIKELY(width<1))
-	    goto nodither; //who knows
+    if(FIM_UNLIKELY(width<1))goto nodither; //who knows
 
 #ifndef FIM_IS_SLOWER_THAN_FBI
     switch(width%8){
@@ -1473,7 +1423,7 @@ void inline FramebufferDevice::dither_line(fim_byte_t *src, fim_byte_t *dst, int
     	case 6:	goto dither6; break ;
     	case 7:	goto dither7; break ;
     }
-#endif /* FIM_IS_SLOWER_THAN_FBI */
+#endif
 
     while (FIM_LIKELY(width)) {
 
@@ -1482,16 +1432,16 @@ void inline FramebufferDevice::dither_line(fim_byte_t *src, fim_byte_t *dst, int
  #define DITHER_CORE \
 	xmod = --width & DITHER_MASK; \
 \
-	b = blue_dither_[*(src++)];  \
+	b = blue_dither[*(src++)];  \
 	b >>= (ymod[xmod] < b)?8:0; \
-	a = green_dither_[*(src++)]; \
+	a = green_dither[*(src++)]; \
 	a >>= (ymod[xmod] < a)?8:0; \
 	b += a; \
-	a = red_dither_[*(src++)]; \
+	a = red_dither[*(src++)]; \
 	a >>= (ymod[xmod] < a)?8:0; \
-	*(dst) = b+a & 0xff; \
+	*(dest) = b+a & 0xff; \
     /*	mirror patch by dez	*/ \
-	dst+=inc;
+	dest+=inc;
 
 #else
  #define DITHER_CORE \
@@ -1500,24 +1450,24 @@ void inline FramebufferDevice::dither_line(fim_byte_t *src, fim_byte_t *dst, int
 	xmod = width & DITHER_MASK; \
  	const long ymod_xmod=ymod[xmod]; \
 \
-	b = blue_dither_[*(src++)]; \
+	b = blue_dither[*(src++)]; \
 	if (ymod_xmod < b) \
 	    b >>= 8; \
 \
-	a = green_dither_[*(src++)]; \
+	a = green_dither[*(src++)]; \
 	if (ymod_xmod < a) \
 	    a >>= 8; \
 	b += a; \
 \
-	a = red_dither_[*(src++)]; \
+	a = red_dither[*(src++)]; \
 	if (ymod_xmod < a) \
 	    a >>= 8; \
 	b += a; \
-	*(dst) = b & 0xff; \
+	*(dest) = b & 0xff; \
     /*	mirror patch by dez	*/ \
-	dst+=inc; \
+	dest+=inc; \
 	} \
-	/*	*(dst++) = b & 0xff;*/ 
+	/*	*(dest++) = b & 0xff;*/ 
 #endif
 
 #ifndef FIM_IS_SLOWER_THAN_FBI
@@ -1535,14 +1485,14 @@ dither3:
 	DITHER_CORE
 dither2:
 	DITHER_CORE
-#endif /* FIM_IS_SLOWER_THAN_FBI */
+#endif
 dither1:
 	DITHER_CORE
     }
 nodither:
 	return;
 }
-void FramebufferDevice::dither_line_gray(fim_byte_t *src, fim_byte_t *dst, int y, int width)
+void FramebufferDevice::dither_line_gray(unsigned char *src, unsigned char *dest, int y, int width)
 {
     long           *ymod, xmod;
     register long   a;
@@ -1552,32 +1502,32 @@ void FramebufferDevice::dither_line_gray(fim_byte_t *src, fim_byte_t *dst, int y
     while (width--) {
 	xmod = width & DITHER_MASK;
 
-	a = gray_dither_[*(src++)];
+	a = gray_dither[*(src++)];
 	if (ymod[xmod] < a)
 	    a >>= 8;
 
-	*(dst++) = a & 0xff;
+	*(dest++) = a & 0xff;
     }
 }
-void FramebufferDevice::fb_switch_release(void)
+void FramebufferDevice::fb_switch_release()
 {
-    ioctl(tty_, VT_RELDISP, 1);
-    fb_switch_state_ = FB_INACTIVE;
-    if (debug_)
+    ioctl(tty, VT_RELDISP, 1);
+    fb_switch_state = FB_INACTIVE;
+    if (debug)
 	FIM_FPRINTF(stderr, "vt: release\n");
 }
-void FramebufferDevice::fb_switch_acquire(void)
+void FramebufferDevice::fb_switch_acquire()
 {
-    ioctl(tty_, VT_RELDISP, VT_ACKACQ);
-    fb_switch_state_ = FB_ACTIVE;
-    if (debug_)
+    ioctl(tty, VT_RELDISP, VT_ACKACQ);
+    fb_switch_state = FB_ACTIVE;
+    if (debug)
 	FIM_FPRINTF(stderr, "vt: acquire\n");
 }
-int FramebufferDevice::fb_switch_init(void)
+int FramebufferDevice::fb_switch_init()
 {
     struct sigaction act,old;
 
-    fim_bzero(&act,sizeof(act));
+    memset(&act,0,sizeof(act));
     
     ffdp=this;// WARNING : A DIRTY HACK
     act.sa_handler  = _fb_switch_signal;
@@ -1585,22 +1535,22 @@ int FramebufferDevice::fb_switch_init(void)
     sigaction(SIGUSR1,&act,&old);
     sigaction(SIGUSR2,&act,&old);
 #ifdef FIM_BOZ_PATCH
-    if(!with_boz_patch_)
-#endif /* FIM_BOZ_PATCH */
-    if (-1 == ioctl(tty_,VT_GETMODE, &vt_mode_)) {
-	fim_perror("ioctl VT_GETMODE");
+    if(!with_boz_patch)
+#endif
+    if (-1 == ioctl(tty,VT_GETMODE, &vt_mode)) {
+	perror("ioctl VT_GETMODE");
 	exit(1);
     }
-    vt_mode_.mode   = VT_PROCESS;
-    vt_mode_.waitv  = 0;
-    vt_mode_.relsig = SIGUSR1;
-    vt_mode_.acqsig = SIGUSR2;
+    vt_mode.mode   = VT_PROCESS;
+    vt_mode.waitv  = 0;
+    vt_mode.relsig = SIGUSR1;
+    vt_mode.acqsig = SIGUSR2;
     
 #ifdef FIM_BOZ_PATCH
-    if(!with_boz_patch_)
-#endif /* FIM_BOZ_PATCH */
-    if (-1 == ioctl(tty_,VT_SETMODE, &vt_mode_)) {
-	fim_perror("ioctl VT_SETMODE");
+    if(!with_boz_patch)
+#endif
+    if (-1 == ioctl(tty,VT_SETMODE, &vt_mode)) {
+	perror("ioctl VT_SETMODE");
 	exit(1);
     }
     return 0;
@@ -1610,14 +1560,14 @@ void FramebufferDevice::fb_switch_signal(int signal)
 {
     if (signal == SIGUSR1) {
 	/* release */
-	fb_switch_state_ = FB_REL_REQ;
-	if (debug_)
+	fb_switch_state = FB_REL_REQ;
+	if (debug)
 	    FIM_FPRINTF(stderr, "vt: SIGUSR1\n");
     }
     if (signal == SIGUSR2) {
 	/* acquisition */
-	fb_switch_state_ = FB_ACQ_REQ;
-	if (debug_)
+	fb_switch_state = FB_ACQ_REQ;
+	if (debug)
 	    FIM_FPRINTF(stderr, "vt: SIGUSR2\n");
     }
 }
@@ -1627,36 +1577,36 @@ int FramebufferDevice::fb_text_init2(void)
 {
     return fs_init_fb(255);
 }
-	int  FramebufferDevice::fb_font_width(void) { return f_->width; }
-	int  FramebufferDevice::fb_font_height(void) { return f_->height; }
+	int  FramebufferDevice::fb_font_width(void) { return f->width; }
+	int  FramebufferDevice::fb_font_height(void) { return f->height; }
 
 int FramebufferDevice::fs_init_fb(int white8)
 {
-    switch (fb_var_.bits_per_pixel) {
+    switch (fb_var.bits_per_pixel) {
     case 8:
-	fs_white_ = white8; fs_black_ = 0; fs_bpp_ = 1;
+	fs_white = white8; fs_black = 0; fs_bpp = 1;
 	fs_setpixel = setpixel1;
 	break;
     case 15:
     case 16:
-	if (fb_var_.green.length == 6)
-	    fs_white_ = 0xffff;
+	if (fb_var.green.length == 6)
+	    fs_white = 0xffff;
 	else
-	    fs_white_ = 0x7fff;
-	fs_black_ = 0; fs_bpp_ = 2;
+	    fs_white = 0x7fff;
+	fs_black = 0; fs_bpp = 2;
 	fs_setpixel = setpixel2;
 	break;
     case 24:
-	fs_white_ = 0xffffff; fs_black_ = 0; fs_bpp_ = fb_var_.bits_per_pixel/8;
+	fs_white = 0xffffff; fs_black = 0; fs_bpp = fb_var.bits_per_pixel/8;
 	fs_setpixel = setpixel3;
 	break;
     case 32:
-	fs_white_ = 0xffffff; fs_black_ = 0; fs_bpp_ = fb_var_.bits_per_pixel/8;
+	fs_white = 0xffffff; fs_black = 0; fs_bpp = fb_var.bits_per_pixel/8;
 	fs_setpixel = setpixel4;
 	break;
     default:
 	FIM_FPRINTF(stderr,  "Oops: %i bit/pixel ???\n",
-		fb_var_.bits_per_pixel);
+		fb_var.bits_per_pixel);
 	return -1;
     }
     return 0;
@@ -1673,13 +1623,13 @@ int FramebufferDevice::fs_init_fb(int white8)
  */
 #if 0
 #ifndef FIM_KEEP_BROKEN_CONSOLE
-void FramebufferDevice::status_screen(const fim_char_t *msg, int draw)
+void FramebufferDevice::status_screen(const char *msg, int draw)
 {	
 	/* current code */
-	return fb_status_screen_new(msg, (fim_bool_t)draw,0);
+	return fb_status_screen_new(msg, draw,0);
 }
-#else /* FIM_KEEP_BROKEN_CONSOLE */
-void FramebufferDevice::status_screen(const fim_char_t *msg, int draw)
+#else
+void FramebufferDevice::status_screen(const char *msg, int draw)
 {
 	/* dead code */
 
@@ -1688,15 +1638,15 @@ void FramebufferDevice::status_screen(const fim_char_t *msg, int draw)
 	/*	WARNING		*/
 	int y,i,j,l,w;
 	// R rows, C columns
-	int R=(fb_var_.yres/fb_font_height())/2,/* half screen : more seems evil */
-	C=(fb_var_.xres/fb_font_width());
-	static fim_char_t **columns=NULL;
-	static fim_char_t *columns_data=NULL;
+	int R=(fb_var.yres/fb_font_height())/2,/* half screen : more seems evil */
+	C=(fb_var.xres/fb_font_width());
+	static char **columns=NULL;
+	static char *columns_data=NULL;
 	if(R<1 || C < 1)return;		/* sa finimm'acca', nun ce sta nient'a fa! */
 	/* R rows and C columns; the last one for string terminators..
 	 */
-	if(!columns)columns=(fim_char_t**)fim_calloc(1,sizeof(fim_char_t**)*R);
-	if(!columns_data)columns_data=fim_stralloc(sizeof(fim_char_t)*(R*(C+1)));
+	if(!columns)columns=(char**)fim_calloc(sizeof(char**)*R,1);
+	if(!columns_data)columns_data=(char*)fim_calloc(sizeof(char)*(R*(C+1)),1);
 	/* 
 	 * seems tricky : we allocate one single buffer and use it as console 
 	 * storage and console pointers storage ...
@@ -1715,7 +1665,7 @@ void FramebufferDevice::status_screen(const fim_char_t *msg, int draw)
 
 	static int cline=0,	//current line		[0..R-1]
 		   ccol=0;	//current column	[0..C]
-	const fim_char_t *p=msg,	//p points to the substring not yet printed
+	const char *p=msg,	//p points to the substring not yet printed
 	      	    *s=p;	//s advances and updates p
 
 	if(!msg)
@@ -1757,7 +1707,7 @@ void FramebufferDevice::status_screen(const fim_char_t *msg, int draw)
 		    if(ccol>=C+1){cleanup();return;}	//ehm.. who knows
 #else
 		    if(ccol>=C+1)return;
-#endif /* CERCO_GRANE */
+#endif
 		    if(ccol==C)
 		    {
 			    //So if we are at the end of the line, we prepare 
@@ -1794,134 +1744,131 @@ void FramebufferDevice::status_screen(const fim_char_t *msg, int draw)
 	    p=s;
 	}
 
-	//if(!mc_.cc_.drawOutput() || noDraw)return;//CONVENTION!
+	//if(!mc.cc.drawOutput() || noDraw)return;//CONVENTION!
 	if(!draw )return;//CONVENTION!
 
 	    y = 1*fb_font_height();
-	    for(i=0  ;i<R ;++i) fs_puts(fb_font_get_current_font(), 0, y*(i), columns[i]);
+	    for(i=0  ;i<R ;++i) fs_puts(fb_font_get_current_font(), 0, y*(i), (unsigned char*)columns[i]);
 
 	    /*
 	     *WARNING : note that columns and columns_data arrays are not freed and should not, as long as they are static.
 	     * */
-#endif /* FIM_KEEP_BROKEN_CONSOLE */
+#endif
 }
 #endif
 
 
-#ifndef FIM_WANT_NO_OUTPUT_CONSOLE
-	FramebufferDevice::FramebufferDevice(MiniConsole & mc):	
-	DisplayDevice(mc)
-#else /* FIM_WANT_NO_OUTPUT_CONSOLE */
-	FramebufferDevice::FramebufferDevice():	
-	DisplayDevice()
-#endif /* FIM_WANT_NO_OUTPUT_CONSOLE */
-	,vt_(0)
-	,dither_(FIM_FBI_FALSE)
-	,pcd_res_(3)
-	//,steps_(FIM_CNS_STEPS_DEFAULT)
-	,fbgamma_(FIM_CNS_GAMMA_DEFAULT)
-	,visible_(1)
-	//,x11_font_("10x20")
-	,ys_( 3)
-	,xs_(10)
+	FramebufferDevice::FramebufferDevice(MiniConsole & mc_):	
+	DisplayDevice(mc_)
+	,vt(0)
+	,dither(FALSE)
+	,pcd_res(3)
+	,steps(50)
+	,fbgamma(1.0)
+	,visible(1)
+	,x11_font("10x20")
+	,ys( 3)
+	,xs(10)
 	,fs_setpixel(NULL)
-	,fbdev_(NULL)
-	,fbmode_(NULL)
+	,fbdev(NULL)
+	,fbmode(NULL)
 #ifdef FIM_BOZ_PATCH
-	,with_boz_patch_(0)
-#endif /* FIM_BOZ_PATCH */
-	,fb_mem_offset_(0)
-	,fb_switch_state_(FB_ACTIVE)
-	,orig_vt_no_(0)
-	,devices_(NULL)
+	,with_boz_patch(0)
+#endif
+	,fb_mem_offset(0)
+	,fb_switch_state(FB_ACTIVE)
+	,orig_vt_no(0)
+	,devices(NULL)
 #ifndef FIM_KEEP_BROKEN_CONSOLE
-	//mc_(48,12),
-//	int R=(fb_var_.yres/fb_font_height())/2,/* half screen : more seems evil */
-//	C=(fb_var_.xres/fb_font_width());
-#endif /* FIM_KEEP_BROKEN_CONSOLE */
+	//mc(48,12),
+//	int R=(fb_var.yres/fb_font_height())/2,/* half screen : more seems evil */
+//	C=(fb_var.xres/fb_font_width());
+#endif
 	{
-		const fim_char_t *line;
 
-		cmap_.start  =  0;
-		cmap_.len    =  256;
-		cmap_.red  =  red_;
-		cmap_.green  =  green_;
-		cmap_.blue  =  blue_;
+		cmap.start  =  0;
+		cmap.len    =  256;
+		cmap.red  =  red;
+		cmap.green  =  green;
+		cmap.blue  =  blue;
 		//! transp!
-		devs_default_.fb0=   FIM_DEFAULT_FB_FILE;
-		devs_default_.fbnr=  "/dev/fb%d";
-		devs_default_.ttynr= "/dev/tty%d";
-		devs_devfs_.fb0=   "/dev/fb/0";
-		devs_devfs_.fbnr=  "/dev/fb/%d";
-		devs_devfs_.ttynr= "/dev/vc/%d";
-		ocmap_.start = 0;
-		ocmap_.len   = 256;
-		ocmap_.red=ored_;
-		ocmap_.green=ogreen_;
-		ocmap_.blue=oblue_;
+		devs_default.fb0=   "/dev/fb0";
+		devs_default.fbnr=  "/dev/fb%d";
+		devs_default.ttynr= "/dev/tty%d";
+		devs_devfs.fb0=   "/dev/fb/0";
+		devs_devfs.fbnr=  "/dev/fb/%d";
+		devs_devfs.ttynr= "/dev/vc/%d";
+		ocmap.start = 0;
+		ocmap.len   = 256;
+		ocmap.red=ored;
+		ocmap.green=ogreen;
+		ocmap.blue=oblue;
+		/*
+		 * fbgamma and fontname are fbi - defined variables.
+		 * */
+		const char *line;
 
-	    	if (NULL != (line = fim_getenv(FIM_ENV_FBGAMMA)))
-	        	fbgamma_ = fim_atof(line);
+	    	if (NULL != (line = fim_getenv("FBGAMMA")))
+	        	fbgamma = fim_atof(line);
+	    	if (NULL != (line = fim_getenv("FBFONT")))
+			fontname = line;
 	}
 
 }
 
-fim_err_t FramebufferDevice::display(
+int FramebufferDevice::display(
 	void *ida_image_img,
-	fim_coo_t yoff,
-	fim_coo_t xoff,
-	fim_coo_t irows,fim_coo_t icols,// rows and columns in the input image
-	fim_coo_t icskip,	// input columns to skip for each line
-	fim_coo_t by,//FIXME : this four arguments should be unsigned !
-	fim_coo_t bx,
-	fim_coo_t bh,
-	fim_coo_t bw,
-	fim_coo_t ocskip,// output columns to skip for each line
-	fim_flags_t flags)
+	int yoff,
+	int xoff,
+	int irows,int icols,// rows and columns in the input image
+	int icskip,	// input columns to skip for each line
+	int by,//FIXME : this four arguments should be unsigned !
+	int bx,
+	int bh,
+	int bw,
+	int ocskip,// output columns to skip for each line
+	int flags)
 {
-	if(by<0)
-		goto err;
-	if(bx<0)
-		goto err;
-	if(bw<0)
-		goto err;
-	if(bh<0)
-		goto err;
+	if(by<0)return -1;
+	if(bx<0)return -1;
+	if(bw<0)return -1;
+	if(bh<0)return -1;
 
 	svga_display_image_new(
-		(struct ida_image*)ida_image_img,
-		yoff,
-		xoff,
-		irows,icols,// rows and columns in the input image
-		icskip,	// input columns to skip for each line
-		by,
-		bx,
-		bh,
-		bw,
-		ocskip,// output columns to skip for each line
-		flags);
-	return FIM_ERR_NO_ERROR;
-err:
-	return FIM_ERR_GENERIC;
+	(struct ida_image*)ida_image_img,
+	yoff,
+	xoff,
+	irows,icols,// rows and columns in the input image
+	icskip,	// input columns to skip for each line
+	by,
+	bx,
+	bh,
+	bw,
+	ocskip,// output columns to skip for each line
+	flags);
+	return 0;
 }
 
 void FramebufferDevice::finalize (void)
 {
-	finalized_=true;
+	finalized=true;
 	clear_screen();
 	cleanup();
 }
 
-FramebufferDevice::~FramebufferDevice(void)
+FramebufferDevice::~FramebufferDevice()
 {
 	/* added in fim : fbi did not have this */
-	fim_free_fs_font(f_);
+	if(f)
+	{
+		if(f->eindex) fim_free(f->eindex);
+		if(f->gindex) fim_free(f->gindex);
+		if(f->glyphs) fim_free(f->glyphs);
+		if(f->extents) fim_free(f->extents);
+		fim_free(f);
+	}
 }
 
-fim_coo_t FramebufferDevice::status_line_height(void)const
-{
-	return f_ ? border_height_ + f_->height : 0;
-}
 #endif  //ifdef FIM_WITH_NO_FRAMEBUFFER, else
 
 

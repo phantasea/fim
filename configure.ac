@@ -1,5 +1,5 @@
 dnl Process this file with autoconf to produce a configure script.
-dnl $LastChangedDate: 2015-02-11 17:42:27 +0100 (Wed, 11 Feb 2015) $
+dnl $Id: configure.ac 265 2009-10-14 21:05:40Z dezperado $
 
 AC_PREREQ([2.54])
 
@@ -10,25 +10,17 @@ AC_PREREQ([2.54])
 #AC_PROG_CC(cc gcc)
 #AC_PROG_CXX(CC g++ gcc c++ cxx)
 
-define([svnversion],esyscmd([sh -c "svnversion | tr  -c '[0-9]' ' ' | sed 's/ *//g;s/^$/-1/g' "]))dnl
+define([svnversion],esyscmd([sh -c "svnversion | tr -d '\n'"]))dnl
 # WARNING : here 0.0 denotes the package version, which will be corrected some lines after this.
-AC_INIT([fim],[0.5-trunk],[dezperado_FOobAr_autistici_Baz_org, by replacing _FOobAr_ with a @ and _Baz_ with a .])
-AC_CONFIG_SRCDIR([src/fim.cpp])
+AC_INIT([fim],[0.3],[dezperado_FOobAr_autistici_Baz_org( by replacing _FOobAr_ with a '@' and _Baz_ with a '.')])
 
 AC_DEFINE(SVN_REVISION,"svnversion",[SVN REVISION])
 AC_SUBST(SVN_REVISION,"svnversion")
-AC_DEFINE(SVN_REVISION_NUMBER,svnversion,[SVN REVISION NUMBER])
-AC_SUBST(SVN_REVISION_NUMBER,svnversion)
-
-AH_TEMPLATE([FIM_CONFIGURATION])
-FIM_CONFIGURATION="$0 $@"
-AC_SUBST(FIM_CONFIGURATION)
-AC_DEFINE_UNQUOTED([FIM_CONFIGURATION],"$FIM_CONFIGURATION")
 
 AC_MSG_NOTICE([
         Welcome to the Fim (revision $SVN_REVISION) configure script!
 	This script will create the right Makefile for building Fim on your system.
-	But first, it will check if your system has the right configuration for Fim to build.
+	But first, it will check if your system has the right configuratin for Fim to build.
 
 	There are options to this script, please run :
 	  ./configure --help=short
@@ -69,11 +61,10 @@ AC_REVISION([$Revision$])
 AC_PROG_CXX
 #AC_PROG_CXXCPP
 AC_CHECK_TOOL(AR, ar, ar)
-fim_cv_version=`cat $srcdir/VERSION`
+fim_cv_version=`cat VERSION`
 AC_LANG([C++])
 #AC_LANG_PUSH([C++])
-AM_INIT_AUTOMAKE
-#AM_INIT_AUTOMAKE(fim, $fim_cv_version)
+AM_INIT_AUTOMAKE(fim, $fim_cv_version)
 #AM_INIT_AUTOMAKE(fim, 1.0)
 AC_SUBST([CONFIG_STATUS_DEPENDENCIES], ['$(top_srcdir)/VERSION'])
 CPPFLAGS=''
@@ -82,7 +73,7 @@ CPPFLAGS=''
 AC_SUBST(FIM_LIBS)
 AC_SUBST(FIM_LIB_OBJECTS)
 AC_SUBST(VERSION)
-dnl AC_SUBST(HTMLDOCS)
+AC_SUBST(HTMLDOCS)
 #AC_LANG_POP([C++])
 
 fim="fim"
@@ -95,7 +86,7 @@ fi
 AC_MSG_RESULT($fim_cv_prefix)
 
 AC_ISC_POSIX
-#AM_C_PROTOTYPES
+AM_C_PROTOTYPES
 if test "x$U" != "x"; then
   AC_MSG_ERROR(Compiler not ANSI compliant)
 fi
@@ -115,71 +106,10 @@ AC_CHECK_FUNC([getenv], AC_DEFINE([HAVE_GETENV], [1], [If present, the getenv fu
 AC_CHECK_FUNC([getline], AC_DEFINE([HAVE_GETLINE], [1], [If present, will be used for stdin reading. (on GNU)]))
 AC_CHECK_FUNC([fgetln], AC_DEFINE([HAVE_FGETLN], [1], [If present, fgetln() will be used as a replacement for getline(). (on BSD)]))
 AC_CHECK_FUNC([get_current_dir_name], AC_DEFINE([HAVE_GET_CURRENT_DIR_NAME], [1], [Should live when _GNU_SOURCE, but it could be not the case.]))
-AC_CHECK_FUNC([rsb_lib_init])
 
 AC_CHECK_LIB([m],[pow])
 AC_CHECK_LIB([fl],[yylex])
-AC_ARG_ENABLE(graphicsmagick, AC_HELP_STRING([--enable-graphicsmagick], [Enable GraphicsMagick library support (EXPERIMENTAL).]), [ if test x$enableval != xno ; then fim_handle_graphicsmagick=yes ; fi ] )
-AC_CHECK_LIB([GraphicsMagick],[GetMagickVersion],
-  [
-if test x"$fim_handle_graphicsmagick" = x"yes" ; then 
-  FIM_LIB_OBJECTS="$FIM_LIB_OBJECTS FbiStuffMagick.o";
-  LIBS="$LIBS `GraphicsMagick-config --cppflags --ldflags --libs|tr '\n' ' '` ";
-  CXXFLAGS="$CXXFLAGS `GraphicsMagick-config --cppflags |tr '\n' ' '` ";
-  AC_DEFINE([HAVE_LIBGRAPHICSMAGICK],[1],[We have libGraphicsMagick])
-fi
-  ], [])
 
-AC_ARG_ENABLE(imlib2, AC_HELP_STRING([--enable-imlib2], [Enable Imlib2 library support (EXPERIMENTAL,INCOMPLETE).]), [ if test x$enableval != xno ; then fim_handle_imlib2=yes ; fi ] )
-AC_CHECK_LIB([Imlib2],[imlib_create_image],
-  [
-if test x"$fim_handle_imlib2" = x"yes" ; then 
-  FIM_LIB_OBJECTS="$FIM_LIB_OBJECTS Imlib2Device.o";
-  LIBS="$LIBS `imlib2-config --libs|tr '\n' ' '` ";
-  CXXFLAGS="$CXXFLAGS `imlib2-config --cflags |tr '\n' ' '` ";
-  AC_DEFINE([FIM_WITH_LIBIMLIB2],[1],[We have libImlib])
-fi
-  ], [])
-
-AC_CHECK_PROG([HAVE_FLEX],[flex],[yes],[no])
-AC_CHECK_PROG([HAVE_BISON],[bison],[yes],[no])
-if test x$HAVE_FLEX  != x"yes" ; then
-       	AC_MSG_ERROR([No flex (lexical analyser generator) executable detected!]) ;
-fi
-if test x$HAVE_BISON != x"yes" ; then
-       	AC_MSG_ERROR([No bison (parser generator) executable detected!]) ;
-fi
-
-AC_CHECK_PROG([HAVE_ECHO],[echo],[yes],[no])
-AC_CHECK_PROG([HAVE_RM],[rm],[yes],[no])
-AC_CHECK_PROG([HAVE_SED],[sed],[yes],[no])
-AC_CHECK_PROG([HAVE_GREP],[grep],[yes],[no])
-AC_CHECK_PROG([HAVE_SORT],[sort],[yes],[no])
-AC_CHECK_PROG([HAVE_CPP],[cpp],[yes],[no])
-AC_CHECK_PROG([HAVE_AWK],[awk],[yes],[no])
-AC_CHECK_PROG([HAVE_CAT],[cat],[yes],[no])
-AC_CHECK_PROG([HAVE_MAN],[man],[yes],[no])
-#AC_CHECK_PROG([HAVE_WHICH],[which],[yes],[no])
-#AC_CHECK_PROG([HAVE_GPG],[gpg],[yes],[no])
-#AC_CHECK_PROG([HAVE_LS],[ls],[yes],[no])
-#AC_CHECK_PROG([HAVE_CD],[cd],[yes],[no])
-#AC_CHECK_PROG([HAVE_CC],[cc],[yes],[no])
-AC_PATH_PROG([RM],[rm],[no])
-AC_PATH_PROG([SED],[sed],[no])
-AC_PATH_PROG([GREP],[grep],[no])
-AC_PATH_PROG([ECHO],[echo],[no])
-AC_PATH_PROG([SORT],[sort],[no])
-AC_PATH_PROG([CPP],[cpp],[no])
-AC_PATH_PROG([AWK],[awk],[no])
-AC_PATH_PROG([CAT],[cat],[no])
-AC_PATH_PROG([MAN],[man],[no])
-#AC_PATH_PROG([CC],[cc],[no])
-#AC_PATH_PROG([WHICH],[which],[no])
-#AC_PATH_PROG([GPG],[gpg],[no])
-#AC_PATH_PROG([LS],[ls],[no])
-#AC_PATH_PROG([CD],[cd],[no])
-# FIXME: what if we have no grep and/or no sed ?
-# (echo is often a shell builtin)
 have_default_bindings=yes
 have_default_mapping=yes
 have_default_config=yes
@@ -266,32 +196,22 @@ AC_FUNC_MMAP
 AC_CHECK_FUNCS([bzero memset memcmp strncmp strcpy])
 AC_CHECK_FUNCS([bcopy bcmp])
 AC_CHECK_FUNCS([drand48 random rand])
-AC_CHECK_FUNCS([fileno])
-AC_CHECK_FUNCS([fmemopen])
 dnl AC_FUNC_REALLOC()	dnl triggers error in automake 1.10.1
 
 #AC_CHECK_HEADERS([stddef.h])
 #AC_CHECK_HEADERS([stdlib.h])
 AC_CHECK_HEADERS([string.h strings.h])
 
-AC_CHECK_HEADERS([wchar.h])
-AC_CHECK_HEADERS([fontconfig/fontconfig.h])
-AC_CHECK_HEADERS([fontconfig/fcfreetype.h])
-
 AC_HEADER_DIRENT()
 AC_CHECK_HEADERS([stdarg.h sys/ioctl.h ioctl.h sysexits.h])
 AC_CHECK_HEADERS([sys/time.h sys/resource.h])
 AC_CHECK_HEADERS([unix.h])
-AC_CHECK_HEADERS([libgen.h])
-AC_CHECK_HEADERS([sys/user.h])
-AC_CHECK_HEADERS([sys/mman.h])
 AC_CHECK_HEADERS([cstdio stdio.h], [break],AC_MSG_ERROR([[Cannot find cstdio or stdio.h.  Fim requires at least one or the other.]]))
 
 AC_CHECK_HEADERS([climits limits.h], [break], AC_MSG_ERROR([[Cannot find limits.h nor climits.  Fim requires it!.]]))
 
 AC_CHECK_SIZEOF([int])
 AC_CHECK_SIZEOF([int *])
-AC_CHECK_SIZEOF([size_t])
 AC_C_BIGENDIAN([fim_big_endian=yes],[fim_big_endian=no],[fim_big_endian=hmmm])
 
 if test "x$fim_big_endian" = "xyes" ; then
@@ -317,29 +237,13 @@ dnl AC_CHECK_FUNCS(setrlimit getsid)
 
 AC_TYPE_SIGNAL
 
-dnl ==================
-AH_TEMPLATE([FIM_WANT_STATIC_BINARY])
-AC_ARG_ENABLE(static, AC_HELP_STRING([--enable-static], [Want a static binary. (disabled by default)]), [       if test x$enableval = xyes; then fim_cv_want_static=1 ; else fim_cv_want_static=0 ; fi ],[ fim_cv_want_static=0 ])
-if test x$fim_cv_want_static == x1 ; then 
-	LIBS="$LIBS --static"
-        LIBDJVU_STATIC_EXTRA="-lpthread"
-	# too many dependencies for the following!
-        LIBPOPPLER_STATIC_EXTRA=""
-        LIBSPECTRE_STATIC_EXTRA=""
-        #LIBPOPPLER_STATIC_EXTRA="-lfreetype -llcms"
-        #LIBSPECTRE_STATIC_EXTRA="-Wl,--start-group -lgs -lfontconfig -ldl -ljbig2dec -ljasper -lpthread -lpng -lppd -lpaper -lavahi-common -lavahi-client -lexpat -lfreetype -lgnutls -ldbus-1 -ltasn1 -lcupsimage -lcups -lgcrypt -Wl,--end-group "
-	LIBTIFF_STATIC_EXTRA="-ljpeg -lz"
-	AC_DEFINE_UNQUOTED([FIM_WANT_STATIC_BINARY], $fim_cv_want_static [Want a static binary. (disabled by default)])
-fi
-dnl ==================
 
-
-AC_ARG_WITH(regex, AC_HELP_STRING([--with-regex], [Use the GNU regex library instead of the POSIX one]),
+AC_ARG_WITH(regex, AC_HELP_STRING([--with-regex], [Use the GNU regex library insteat of the POSIX one]),
         [fim_cv_regex=yes],
         [AC_CHECK_FUNCS(regcomp, fim_cv_regex=no, fim_cv_regex=yes)])
 
 if test X$fim_cv_regex = Xno ; then
-AC_CACHE_CHECK([whether your system regexp library is completely broken],
+AC_CACHE_CHECK([whether your system's regexp library is completely broken],
         [fim_cv_regex_broken],
         AC_TRY_RUN([
 #include <unistd.h>
@@ -439,7 +343,7 @@ if test x$fim_handle_tiff != xno ; then
     AC_CHECK_LIB(tiff,TIFFOpen ,
       have_tiff=yes,
       have_tiff=no
-      AC_MSG_WARN([*** TIFF loader will not be built (TIFF library not found) ***]) , [$LIBTIFF_STATIC_EXTRA])
+      AC_MSG_WARN([*** TIFF loader will not be built (TIFF library not found) ***]))
     if test x"$have_tiff" = xyes; then
       AC_MSG_CHECKING([for tiff.h])
       AC_TRY_CPP(
@@ -452,7 +356,7 @@ if test x$fim_handle_tiff != xno ; then
         have_tiff=no)
       AC_MSG_RESULT($have_tiff)
       if test x"$have_tiff" = xyes; then
-        LIBTIFF="-ltiff $LIBTIFF_STATIC_EXTRA"
+        LIBTIFF='-ltiff'
       else
           AC_MSG_WARN([*** TIFF loader will not be built (TIFF header file not found) ***])
       fi
@@ -480,7 +384,7 @@ AM_CONDITIONAL(ENABLE_TIFF, test x$have_tiff = xyes)
 
 
 dnl ============= cacalib : optional
-AC_CHECK_LIB(caca, caca_create_canvas,have_cacalib=yes,have_cacalib=no)
+AC_CHECK_LIB(caca, caca_init,have_cacalib=yes,have_cacalib=no)
 
 dnl ============= GNU gpm, unofficial yet
 
@@ -527,7 +431,7 @@ if test x$have_readline = xno; then
   fi
 fi
 
-dnl FIXME : we try to detecht curses, although we do not know if the preceding did use it
+dnl FIXME : we try to detecht curses, although we don't know if the preceding did use it
 if test x$have_readline = xyes; then
   if test x$fim_want_readline = xyes ; then
     AC_CHECK_LIB(curses, tputs,
@@ -662,7 +566,7 @@ if test x$fim_handle_ps != xno ; then
     AC_CHECK_LIB(spectre, spectre_page_render,
       have_ps=yes,
       have_ps=no
-      AC_MSG_WARN([*** PS loader will not be built (spectre library not found) ***]) , [$LIBSPECTRE_STATIC_EXTRA])
+      AC_MSG_WARN([*** PS loader will not be built (spectre library not found) ***]))
     if test x"$have_ps" = xyes; then
       AC_MSG_CHECKING([for libspectre/spectre.h])
       AC_TRY_CPP(
@@ -675,7 +579,7 @@ if test x$fim_handle_ps != xno ; then
         have_ps=no)
       AC_MSG_RESULT($have_ps)
       if test x"$have_ps" = xyes; then
-        LIBPS="-lspectre $LIBSPECTRE_STATIC_EXTRA"
+        LIBPS='-lspectre'
       else
           AC_MSG_WARN([*** PS loader will not be built (PS header file not found) ***])
       fi
@@ -718,7 +622,7 @@ if test x$fim_handle_djvu != xno ; then
     AC_CHECK_LIB(djvulibre, ddjvu_page_create_by_pageno,
       have_djvu=yes,
       have_djvu=no
-      AC_MSG_WARN([*** DJVU loader will not be built (DJVU library not found) ***]), [$LIBDJVU_STATIC_EXTRA])
+      AC_MSG_WARN([*** DJVU loader will not be built (DJVU library not found) ***]))
     if test x"$have_djvu" = xyes; then
       AC_MSG_CHECKING([for libdjvu/ddjvuapi.h])
       AC_TRY_CPP(
@@ -731,7 +635,7 @@ if test x$fim_handle_djvu != xno ; then
         have_djvu=no)
       AC_MSG_RESULT($have_djvu)
       if test x"$have_djvu" = xyes; then
-        LIBDJVU="-ldjvulibre $LIBDJVU_STATIC_EXTRA"
+        LIBDJVU='-ldjvulibre'
       else
           AC_MSG_WARN([*** DJVU loader will not be built (DJVU header file not found) ***])
       fi
@@ -764,11 +668,11 @@ dnl
 dnl By default, we disable poppler : its API is still immature.
 dnl
 fim_handle_pdf=no
-AC_ARG_ENABLE(poppler, AC_HELP_STRING([--enable-poppler], [Enable poppler (PDF rendering) support. This will add LIBPOPPLER_CXXFLAGS="-I/usr/include/poppler/" to the compilation flags. You can override this by passing configure a suitable LIBPOPPLER_CXXFLAGS variable.]),
+AC_ARG_ENABLE(poppler, AC_HELP_STRING([--enable-poppler], [Enable poppler (PDF rendering) support.]),
 [       if test x$enableval = xyes ; then
 		fim_handle_pdf=yes
         fi
-], [$LIBPOPPLER_STATIC_EXTRA])
+])
 dnl FIXME : checking only for libpoppler-glib, should also check for libpoppler !
 if test x$fim_handle_pdf != xno ; then
   fim_handle_pdf=yes
@@ -786,7 +690,7 @@ dnl FIXME : the following is a dirty hack
        #undef PACKAGE
        #undef VERSION
        #undef HAVE_STDLIB_H
-       /* fim uses these headers. let us hope poppler will stabilize soon!*/
+       /* fim uses these headers. let's hope poppler will stabilize soon!*/
        #include <poppler/poppler-config.h>
        #include <poppler/PDFDoc.h>
        #include <poppler/OutputDev.h>
@@ -801,13 +705,11 @@ dnl FIXME : the following is a dirty hack
       have_poppler=yes
       AC_MSG_RESULT($have_poppler)
       if test x"$have_poppler" = xyes; then
-        LIBPOPPLER="-lpoppler $LIBPOPPLER_STATIC_EXTRA"
+        LIBPOPPLER='-lpoppler'
 	# FIXME: the following is a dirty hack!
-	if test x"$LIBPOPPLER_CXXFLAGS" = x ; then
-        	LIBPOPPLER_CXXFLAGS="-I/usr/include/poppler/"
-	fi
-        CXXFLAGS="$CXXFLAGS $LIBPOPPLER_CXXFLAGS -DFIM_LIBPOPPLER_VERSION_MAYBE=$have_poppler_maybe_version"
-dnl	are we sure poppler does not have something like the following ?
+        LIBPOPPLER_CXXFLAGS="-I/usr/include/poppler/"
+        CXXFLAGS="$CXXFLAGS $LIBPOPPLER_CXXFLAGS"
+dnl	are we sure poppler doesn't have something like the following ?
 dnl        LIBPOPPLER_LIBS=`$LIBPOPPLER_CONFIG --libs`
       else
           AC_MSG_WARN([*** POPPLER/PDF loader will not be built (POPPLER header file not found) ***])
@@ -819,7 +721,7 @@ dnl        LIBPOPPLER_LIBS=`$LIBPOPPLER_CONFIG --libs`
   if test x"$have_poppler" == xyes ; then
   FIM_LIB_OBJECTS="$FIM_LIB_OBJECTS FbiStuffPdf.o"
   LIBS="$LIBS $LIBPOPPLER"
-  AC_DEFINE([HAVE_LIBPOPPLER],[1],[We have libpoppler (Warning: the API could still break! (as of v.0.8.7--0.24.1))])
+  AC_DEFINE([HAVE_LIBPOPPLER],[1],[We have libpoppler (Warning: the API could still break! (tested with v.0.8.7))])
   else
     fim_handle_pdf=no
   fi
@@ -863,36 +765,6 @@ AM_CONDITIONAL(ENABLE_PDF, test x$enable_pdf = xyes)
 dnl ================== end of pdf checks ============================================
 
 dnl ================================================================================
-fim_handle_bmp=yes
-AC_ARG_ENABLE(bmp, AC_HELP_STRING([--disable-bmp], [Disable BMP file support (enabled by default).]),
-[       if test x$enableval = xno ; then
-		fim_handle_bmp=no
-        fi
-])
-if test x$fim_handle_bmp = xyes; then
-	AC_MSG_NOTICE([Enabling BMP file format support.])
-	AC_DEFINE(FIM_WITH_BMP, 1, [BMP file support.])
-	FIM_LIB_OBJECTS="$FIM_LIB_OBJECTS FbiStuffBmp.o"
-else
-	AC_MSG_NOTICE([Disabling BMP file format support.])
-	AC_DEFINE(FIM_WITH_BMP, 0, [BMP file support.])
-fi
-dnl ================================================================================
-fim_handle_pcx=yes
-AC_ARG_ENABLE(pcx, AC_HELP_STRING([--disable-pcx], [Disable PCX file support (enabled by default).]),
-[       if test x$enableval = xno ; then
-		fim_handle_pcx=no
-        fi
-])
-if test x$fim_handle_pcx = xyes; then
-	AC_MSG_NOTICE([Enabling PCX file format support.])
-	AC_DEFINE(FIM_WITH_PCX, 1, [PCX file support.])
-	FIM_LIB_OBJECTS="$FIM_LIB_OBJECTS FbiStuffPcx.o"
-else
-	AC_MSG_NOTICE([Disabling PCX file format support.])
-	AC_DEFINE(FIM_WITH_PCX, 0, [PCX file support.])
-fi
-dnl ================================================================================
 
 ## png file handling
 
@@ -920,11 +792,7 @@ if test x$fim_handle_png = xyes; then
 		fim_handle_png=no
         else
                 CXXFLAGS="$CXXFLAGS `$LIBPNG_CONFIG --cflags`"
-		if test x$fim_cv_want_static == x1 ; then 
-                LIBS="$LIBS `$LIBPNG_CONFIG --static --libs`"
-		else
                 LIBS="$LIBS `$LIBPNG_CONFIG --libs`"
-		fi
 		# finish this !
                 FIM_LIB_OBJECTS="$FIM_LIB_OBJECTS FbiStuffPng.o"
                 AC_DEFINE(FIM_WITH_LIBPNG, 1, [Defined, if libpng support is enabled])
@@ -932,104 +800,6 @@ if test x$fim_handle_png = xyes; then
 fi
 
 #AM_CONDITIONAL(BUILD_PNG, test x$fim_handle_png = xyes)
-
-dnl ================================================================================
-
-fim_handle_xyz=no
-
-AC_ARG_ENABLE(xyz, AC_HELP_STRING([--enable-xyz], [Enable the sample bogus 'xyz' file loading support. This makes only sense in order to learn how to include a new file format and wish to play with src/FbiStuffXyz.cpp in the while.]),
-[       if test x$enableval = xyes ; then
-		fim_handle_xyz=yes
-        fi
-])
-
-if test x$fim_handle_xyz = xyes; then
-	LIBXYZ="" # one would set an actual value here
-	LIBS="$LIBS $LIBXYZ"
-	FIM_LIB_OBJECTS="$FIM_LIB_OBJECTS FbiStuffXyz.o"
-	AC_DEFINE(FIM_WITH_LIBXYZ, 1, [Defined if sample bogus 'xyz' loader support is enabled.])
-fi
-
-dnl ================================================================================
-
-## raw/nef file handling via UFRaw
-
-fim_handle_ufraw=no
-
-AC_ARG_ENABLE(ufraw, AC_HELP_STRING([--enable-ufraw], [Enable UFRaw support (EXPERIMENTAL).]),
-[       if test x$enableval = xno ; then
-		fim_handle_ufraw=no
-	else
-		fim_handle_ufraw=yes
-        fi
-])
-
-if test x$fim_handle_ufraw = xyes; then
-	# support for custom library configurator path
-	CXXFLAGS="$CXXFLAGS $UFRAW_CXXFLAGS"
-	LIBS="$LIBS $UFRAW_LIBS"
-	FIM_LIB_OBJECTS="$FIM_LIB_OBJECTS FbiStuffUFRaw.o" # FIXME
-	AC_DEFINE(FIM_WITH_UFRAW, 1, [Defined, if UFRaw support is enabled])
-	AC_MSG_NOTICE([Enabling UFRaw / libufraw.])
-fi
-
-dnl ================================================================================
-
-## archive file handling via libarchive
-
-fim_handle_archive=no
-
-AC_ARG_ENABLE(archive, AC_HELP_STRING([--enable-archive], [Enable libarchive support (please provide ARCHIVE_LIBS, ARCHIVE_CXXFLAGS) (EXPERIMENTAL, UNFINISHED).]),
-[       if test x$enableval = xno ; then
-		fim_handle_archive=no
-	else
-		fim_handle_archive=yes
-        fi
-])
-
-if test x$fim_handle_archive = xyes; then
-	# support for custom library configurator path
-	CXXFLAGS="$CXXFLAGS $ARCHIVE_CXXFLAGS"
-	LIBS="$LIBS $ARCHIVE_LIBS -larchive"
-	AC_DEFINE(FIM_WITH_ARCHIVE, 1, [Defined, if (EXPERIMENTAL, UNFINISHED) libarchive support is enabled])
-	AC_MSG_NOTICE([Enabling libarchive.])
-fi
-
-dnl ================================================================================
-
-AC_CHECK_LIB(exif, exif_data_new_from_data,have_libexif=yes,have_libexif=no)
-AC_ARG_ENABLE(exif, AC_HELP_STRING([--disable-exif], [JPEG EXIF tags support with libexif.]), [if test x$enableval != xno; then fim_cv_libexif=yes; fi],[fim_cv_libexif=yes;])
-
-if test x$fim_cv_libexif = xyes; then
-	if test x$have_libexif = xyes; then
-      			AC_MSG_NOTICE([Enabling libexif usage.])
-			CXXFLAGS="$CXXFLAGS";
-			LIBS="$LIBS -lexif";
-	else
-		        AC_MSG_ERROR([Sorry, it does not seem like libexif is installed or detectable.
-			Please run --disable-exif or install libexif in a system-wide directory instead.
-			])
-	fi
-fi
-
-dnl ================================================================================
-
-AC_ARG_ENABLE(jasper, AC_HELP_STRING([--enable-jasper], [Turns on JPEG-2000 files support using JasPer (EXPERIMENTAL)]),
-	[if test x$enableval = xyes; then
-		fim_cv_libjasper=yes;
-		CXXFLAGS="$CXXFLAGS";
-		LIBS="$LIBS -ljasper";
-		AC_CHECK_LIB(jasper, jas_init,have_libjasper=yes,have_libjasper=no)
-		if test x$have_libjasper = xyes; then
-			AC_MSG_NOTICE([Enabling support of JPEG-2K files with JasPer.]);
-  			FIM_LIB_OBJECTS="$FIM_LIB_OBJECTS FbiStuffJasPer.o";
-		else
-			fim_cv_libjasper=no;
-		        AC_MSG_ERROR([Sorry, it does not seem like libjasper is installed or detectable.
-			Please run --disable-exif or install libjasper in a system-wide directory instead.
-			]);
-		fi
-	fi],[fim_cv_libjasper=no;])
 
 dnl ================================================================================
 
@@ -1057,7 +827,7 @@ AC_ARG_ENABLE(aa, AC_HELP_STRING([--enable-aa], [Turns on aalib support (EXPERIM
       			AC_MSG_NOTICE([Enabling aalib driver.])
 		else
 			fim_cv_aalib=no
-		        AC_MSG_ERROR([Sorry, it does not seem like aalib is installed or detectable.
+		        AC_MSG_ERROR([Sorry, it doesn't seem like aalib is installed or detectable.
 			Please run --disable-aa or install aalib in a system-wide directory instead.
 			])
 		fi
@@ -1070,7 +840,7 @@ dnl ============================================================================
 AC_ARG_WITH(sdl-prefix, AC_HELP_STRING([--with-sdl-prefix=PFX], [prefix where libsdl is installed (optional)]),
 libsdl_config_prefix="$withval", libsdl_config_prefix="")
 
-fim_handle_sdl='auto'
+fim_handle_sdl=no
 
 dnl AC_ARG_ENABLE(sdl, AC_HELP_STRING([--disable-sdl], [Disable libsdl support.]),
 dnl [       if test x$enableval = xno ; then
@@ -1078,54 +848,34 @@ dnl 		fim_handle_sdl=no
 dnl         fi
 dnl ])
 
-AC_ARG_ENABLE(sdl, AC_HELP_STRING([--disable-sdl], [Disable libsdl support.]),
-[       if test x$enableval = xyes ; then fim_handle_sdl=yes ; fi ]
-[       if test x$enableval = xno  ; then fim_handle_sdl=no  ; fi ])
+AC_ARG_ENABLE(sdl, AC_HELP_STRING([--enable-sdl], [Enable libsdl support.]),
+[       if test x$enableval = xyes ; then
+		fim_handle_sdl=yes
+        fi
+])
 
 # tested with sdl 1.2
-if test x$fim_handle_sdl != xno; then
+if test x$fim_handle_sdl = xyes; then
 	# support for custom library configurator path
         if test x$libsdl_config_prefix != x; then
                 LIBSDL_CONFIG="$libsdl_config_prefix/bin/sdl-config"
         else
+		# default path configurator
                 AC_PATH_PROG(LIBSDL_CONFIG, sdl-config, no)
         fi
         if test "x$LIBSDL_CONFIG" = "xno"; then
-		if test x$fim_handle_sdl = xyes; then
-                	AC_MSG_ERROR([LIBSDL not found (failed detecting the sdl-config program)])
-		else
-			fim_handle_sdl='no'
-		fi
+                AC_MSG_ERROR([LIBSDL not found])
         else
-		if test x$fim_cv_want_static == x1 ; then 
-			LIBSDL_CONFIG_FLAGS=--static-libs
-		else
-			LIBSDL_CONFIG_FLAGS=--libs
-		fi
-		AC_MSG_NOTICE([Activating LIBSDL.])
-		fim_handle_sdl='yes'
                 LIBSDL_CXXFLAGS=`$LIBSDL_CONFIG --cflags`
                 CXXFLAGS="$CXXFLAGS $LIBSDL_CXXFLAGS"
-                LIBS="$LIBS `$LIBSDL_CONFIG $LIBSDL_CONFIG_FLAGS`"
+                LIBS="$LIBS `$LIBSDL_CONFIG --libs`"
 		# finish this !
                 #FIM_LIB_OBJECTS="$FIM_LIB_OBJECTS SDLDevice.o"
                 AC_DEFINE(FIM_WITH_LIBSDL, 1, [Defined, if libsdl support is enabled])
         fi
 fi
 
-dnl ================================================================================
 
-AH_TEMPLATE([FIM_WANT_EXIFTOOL])
-fim_cv_exiftool=no
-AC_ARG_ENABLE(exiftool, AC_HELP_STRING([--enable-exiftool], [Turns on exiftool support (EXPERIMENTAL, shall provide the EXIFTOOLLINK variable with library or object files and EXIFTOOLCXXFLAGS)]),
-	[if test x$enableval = xyes; then
-		fim_cv_exiftool=yes
-		CXXFLAGS="$CXXFLAGS $EXIFTOOLCXXFLAGS"
-		LIBS="$LIBS $EXIFTOOLLINK"
-      		AC_MSG_NOTICE([Enabling exiftool interface.])
-		AC_DEFINE(FIM_WANT_EXIFTOOL, 1, [If defined, exiftool will be used to get additional file information (EXPERIMENTAL).])
-	fi],[fim_cv_exiftool=no])
-dnl
 
 #AC_DEFINE([FIM_DEFAULT_KEY_CONFIG]   ,1, [Defined, if GPGME support is enabled])
 #AC_DEFINE([FIM_DEFAULT_CONFIG], 1, [Defined, if GPGME support is enabled])
@@ -1154,43 +904,9 @@ fi
 
 dnl ==================
 
-AC_ARG_ENABLE(hardcoded-font, AC_HELP_STRING([--enable-hardcoded-font], [Enable a hardcoded font in the executable (good as a fallback (FBFONT=fim://) when no PSF format consolefonts files are available).]),
-[if test x$enableval = xyes; then
-        fim_cv_hardcoded_font=yes;
-else
-        fim_cv_hardcoded_font=no;
-fi],[ fim_cv_hardcoded_font=yes; ])
-
-AH_TEMPLATE([FIM_WANT_HARDCODED_FONT])
-if test x$fim_cv_hardcoded_font = xyes; then
-	have_hardcoded_font=yes
-	AC_DEFINE([FIM_WANT_HARDCODED_FONT],1,[Enable a hardcoded font in the executable.])
-else
-	have_hardcoded_font=no
-fi
-AM_CONDITIONAL(FIM_WANT_HARDCODED_CONSOLEFONT, test x$have_hardcoded_font = xyes )
-
-
-dnl ==================
-
-AC_ARG_ENABLE(long-int-vars, AC_HELP_STRING([--enable-long-int-vars], [Internals shall use 64 bit integers (EXPERIMENTAL].),
-[if test x$enableval = xyes; then
-        fim_cv_want_int64_int=yes;
-else
-        fim_cv_want_int64_int=no;
-fi],[ fim_cv_want_int64_int=yes; ])
-
-AH_TEMPLATE([FIM_WANT_LONG_INT])
-if test x$fim_cv_want_int64_int = xyes; then
-	AC_DEFINE([FIM_WANT_LONG_INT],1,[Internals shall use 64 bit integers (EXPERIMENTAL).])
-else
-	AC_DEFINE([FIM_WANT_LONG_INT],0,[Internals shall use 64 bit integers (EXPERIMENTAL).])
-fi
-dnl ==================
-
 fim_cv_windows=yes
 
-AC_ARG_ENABLE(windows, AC_HELP_STRING([--disable-windows], [Disable windowing system in Fim. (deprecated)]),
+AC_ARG_ENABLE(windows, AC_HELP_STRING([--disable-windows], [Disable Fim's own windowing system. (deprecated)]),
 [if test x$enableval = xno; then
         fim_cv_windows=no
 fi])
@@ -1205,9 +921,10 @@ fi
 
 
 dnl ==================
+
 fim_cv_fimrc=yes
 
-AC_ARG_ENABLE(fimrc, AC_HELP_STRING([--disable-fimrc], [Fim will by default load the ~/.fimrc file.]),
+AC_ARG_ENABLE(fimrc, AC_HELP_STRING([--disable-fimrc], [Fim will by default load the ~.fimrc file.]),
 [if test x$enableval = xno; then
         fim_cv_fimrc=no
 fi])
@@ -1217,22 +934,6 @@ if test x$fim_cv_fimrc = xyes; then
 	have_fimrc=yes
 else
 	AC_DEFINE([FIM_NOFIMRC])
-fi
-
-dnl ==================
-AH_TEMPLATE([FIM_NOHISTORY])
-fim_cv_history=yes
-
-AC_ARG_ENABLE(history, AC_HELP_STRING([--disable-history], [Fim will by default load/save a ~/.fim_history file.]),
-[if test x$enableval = xno; then
-        fim_cv_history=no
-fi])
-
-AH_TEMPLATE([FIM_NOHISTORY])
-if test x$fim_cv_history = xyes; then
-	have_history=yes
-else
-	AC_DEFINE([FIM_NOHISTORY])
 fi
 
 dnl ==================
@@ -1292,23 +993,23 @@ AC_ARG_ENABLE(seek-magic, AC_HELP_STRING([--enable-seek-magic], [Fim will be cap
 ],[ fim_cv_seek_magic=no ]
 )
 dnl ==================
-AC_ARG_ENABLE(pushdir, AC_HELP_STRING([--enable-pushdir], [Fim will scan directories for files.]),
+AC_ARG_ENABLE(read-dirs, AC_HELP_STRING([--enable-read-dirs], [Fim will try scan directories for files.]),
 [       if test x$enableval = xno; then
 		fim_cv_read_dirs=no
 	else
                 fim_cv_read_dirs=yes
         fi
-],[ fim_cv_read_dirs=yes ]
+],[ fim_cv_read_dirs=no ]
 )
 dnl ==================
-AC_ARG_ENABLE(recursive-pushdir, AC_HELP_STRING([--disable-recursive-pushdir], [Fim will be able to push directories recursively (implies --enable-push-dirs )]),
-[       if test x$enableval = xyes; then
-		fim_cv_recursive_dirs=yes;
-                fim_cv_read_dirs=yes;
+AC_ARG_ENABLE(recursive-dirs, AC_HELP_STRING([--enable-recursive-dirs], [Fim will try to recurse directories (implies --enable-read-dirs )]),
+[       if test x$enableval = xno; then
+		fim_cv_recursive_dirs=no
 	else
-                fim_cv_recursive_dirs=no;
+                fim_cv_recursive_dirs=yes
+                fim_cv_read_dirs=yes
         fi
-],[ fim_cv_recursive_dirs=yes;fim_cv_read_dirs=yes; ]
+],[ fim_cv_recursive_dirs=no ]
 )
 dnl ==================
 
@@ -1395,23 +1096,23 @@ dnl ==================
 
 fim_cv_cacalib=no
 
-AC_ARG_ENABLE(cacalib, AC_HELP_STRING([--enable-cacalib], [Turns on cacalib support (STILL INCOMPLETE)]),
-	[if test x$enableval = xyes; then
-	if test x$have_cacalib = xyes; then
-	fim_cv_cacalib=yes
-	else
-    AC_MSG_ERROR([Sorry, it does not seem like cacalib is installed or detectable.
-	Please run --disable-cacalib or install cacalib in a system-wide directory instead.
-	])
-	fi
-	fi])
+dnl AC_ARG_ENABLE(cacalib, AC_HELP_STRING([--enable-cacalib], [Turns on cacalib support (STILL INCOMPLETE)]),
+dnl 	[if test x$enableval = xyes; then
+dnl 	if test x$have_cacalib = xyes; then
+dnl 	fim_cv_cacalib=yes
+dnl 	else
+dnl     AC_MSG_ERROR([Sorry, it doesn't seem like cacalib is installed or detectable.
+dnl 	Please run --disable-cacalib or install cacalib in a system-wide directory instead.
+dnl 	])
+dnl 	fi
+dnl 	fi])
 
 dnl ==================
 
 # This code still awaits for integration ...
 AC_ARG_WITH(cflags, AC_HELP_STRING([--with-cflags=CXXFLAGS], 
 	[Specify a custom CXXFLAGS append value.  e.g.: -pg
-	 You cannot call this argument multiple times.
+	 You can't call this argument multiple times.
 	 In case you want completely reset CXXFLAGS use :
 	 CXXFLAGS='<all that you want>' ./configure ..
 	 Note that Fim is a C++ program, so we set CXXFLAGS=CXXFLAGS.
@@ -1460,7 +1161,7 @@ if test x$fim_cv_scan_consolefonts = xyes; then
 fi
 dnl ==================
 
-AC_ARG_ENABLE(convert, AC_HELP_STRING([--disable-convert], [Fim will try to use convert (ImageMagick) as a last resort for opening unknown format files.]),
+AC_ARG_ENABLE(convert, AC_HELP_STRING([--disable-convert], [Fim will try to use ImageMagick's convert as a last resort for opening unknown format files.]),
 [       if test x$enableval = xno; then
 		fim_cv_convert=no
 	else
@@ -1473,7 +1174,7 @@ AC_ARG_ENABLE(convert, AC_HELP_STRING([--disable-convert], [Fim will try to use 
 
 dnl ==================
 
-AC_ARG_ENABLE(xcftopnm, AC_HELP_STRING([--disable-xcftopnm], [Fim will try to use xcftopnm (Gimp) for opening XCF format files.]),
+AC_ARG_ENABLE(xcftopnm, AC_HELP_STRING([--disable-xcftopnm], [Fim will try to use Gimp's xcftopnm for opening XCF format files.]),
 [       if test x$enableval = xno; then
 		fim_cv_xcftopnm=no
 	else
@@ -1517,27 +1218,9 @@ AC_ARG_ENABLE(dia, AC_HELP_STRING([--disable-dia], [Fim will try to use dia for 
 )
 
 dnl ==================
-AH_TEMPLATE([FIM_DEFAULT_CONSOLEFONT])
-AC_ARG_WITH(default-consolefont, AC_HELP_STRING([--with-default-consolefont=FILE], [Specify a default consolefont (psf or psf.gz format) file.]), [ AC_DEFINE_UNQUOTED(FIM_DEFAULT_CONSOLEFONT, "$withval") ], [fim_cv_defaultconsolefont=""])
-dnl ==================
-AC_ARG_WITH(custom-hardcoded-consolefont, AC_HELP_STRING([--with-custom-hardcoded-consolefont=FILE], [Specify a custom consolefont to be hardcoded (psf format, absolute path) at build time (requires --enable-hardcoded-font).]), [
-fim_cv_want_custom_hardcoded_consolefont=true;
-AC_SUBST(FIM_CUSTOM_HARDCODED_CONSOLEFONT, "$withval")
-], [])
-AM_CONDITIONAL(FIM_WANT_CUSTOM_HARDCODED_CONSOLEFONT, test x$fim_cv_want_custom_hardcoded_consolefont = xtrue )
-dnl ==================
 AC_ARG_WITH(tmpfile, AC_HELP_STRING([--with-tmpfile=FILE], [Specify where to put temporary files created when interacting with external conversion programs (default is "/tmp/__FIM_TEMPORARY_FILE").]),
         [fim_cv_tmpfile=$withval],
         [fim_cv_tmpfile="/tmp/__FIM_TEMPORARY_FILE"])
-dnl ==================
-AC_ARG_ENABLE(custom-status-bar, AC_HELP_STRING([--disable-custom-status-bar], [Customization of status bar via a printf-like string.]),
-[       if test x$enableval = xno; then
-		fim_cv_custom_status_bar=no;
-	else
-                fim_cv_custom_status_bar=yes;
-        fi
-],[ fim_cv_custom_status_bar=yes; ]
-)
 dnl ==================
 
 AC_ARG_ENABLE(optimizations, AC_HELP_STRING([--enable-optimizations], [Will try to enhance compilation flags (EXPERIMENTAL)]),
@@ -1567,12 +1250,11 @@ AC_CHECK_PROG(have_zcat,zcat,yes,no)
 		AC_DEFINE([FIM_USE_ZCAT])
 	fi
 
-dnl 20110602 will use man --html-cat instead of obsolete man2html 
-dnl AC_CHECK_PROG(have_man2html,man2html,yes,no)
-dnl        if test x$have_man2html = xyes ; then
-dnl      		AC_MSG_NOTICE([The installer will try to invoke 'man2html' to build html versions of the man pages.])
-dnl		HTMLDOCS="FIM.html fim.man.html fimgs.man.html"
-dnl	fi
+AC_CHECK_PROG(have_man2html,man2html,yes,no)
+        if test x$have_man2html = xyes ; then
+      		AC_MSG_NOTICE([The installer will try to invoke 'man2html' to build html versions of the man pages.])
+		HTMLDOCS="FIM.html fim.man.html fimgs.man.html"
+	fi
 
 AC_CHECK_PROG(have_convert,convert,yes,no)
         if test x$have_convert = xyes -a x$fim_cv_convert = xyes ; then
@@ -1654,18 +1336,6 @@ dnl ==================
 
 dnl ==================
 
-    AH_TEMPLATE([FIM_WITH_LIBJASPER])
-            if test x$fim_cv_libjasper = xyes ; then
-    		AC_DEFINE([FIM_WITH_LIBJASPER])
-    	fi
-dnl ==================
-
-    AH_TEMPLATE([FIM_WITH_LIBEXIF])
-            if test x$fim_cv_libexif = xyes ; then
-    		AC_DEFINE([FIM_WITH_LIBEXIF])
-    	fi
-dnl ==================
-
     AH_TEMPLATE([FIM_WITH_AALIB])
             if test x$fim_cv_aalib = xyes ; then
     		AC_DEFINE([FIM_WITH_AALIB])
@@ -1686,71 +1356,8 @@ dnl ==================
     	fi
 
 dnl ==================
-    AH_TEMPLATE([FIM_WANT_CUSTOM_INFO_STATUS_BAR])
-            if test x$fim_cv_custom_status_bar = xyes ; then
-    		AC_DEFINE([FIM_WANT_CUSTOM_INFO_STATUS_BAR])
-    	fi
 
-dnl ==================
-AH_TEMPLATE([FIM_WANT_FILENAME_MARK_AND_DUMP])
-AC_ARG_ENABLE(mark-and-dump, AC_HELP_STRING([--enable-mark-and-dump], [Fim will be capable of marking files while viewing and outputting their names on exit. (enabled by default)]), [       if test x$enableval = xyes; then fim_cv_want_mark_and_dump=1 ; else fim_cv_want_mark_and_dump=0 ; fi ],[ fim_cv_want_mark_and_dump=1 ])
-AC_DEFINE_UNQUOTED([FIM_WANT_FILENAME_MARK_AND_DUMP], $fim_cv_want_mark_and_dump, [Fim will be capable of marking files while viewing and outputting their names on exit.])
-dnl ==================
-AH_TEMPLATE([FIM_WANT_NOSCRIPTING])
-AC_ARG_ENABLE(scripting, AC_HELP_STRING([--enable-scripting], [Scripting. (enabled by default)]), [       if test x$enableval = xyes; then fim_cv_want_noscripting=0 ; else fim_cv_want_noscripting=1 ; fi ],[ fim_cv_want_noscripting=0 ])
-if test x$fim_cv_want_noscripting == x1 ; then 
-AC_DEFINE_UNQUOTED([FIM_WANT_NOSCRIPTING], $fim_cv_want_noscripting, [Scripting. (enabled by default)])
-fi
-dnl ==================
-AH_TEMPLATE([FIM_WANT_NO_OUTPUT_CONSOLE])
-AC_ARG_ENABLE(output-console, AC_HELP_STRING([--enable-output-console], [Output console. (enabled by default)]), [       if test x$enableval = xyes; then fim_cv_want_no_output_console=0 ; else fim_cv_want_no_output_console=1 ; fi ],[ fim_cv_want_no_output_console=0 ])
-if test x$fim_cv_want_no_output_console == x1 ; then 
-AC_DEFINE_UNQUOTED([FIM_WANT_NO_OUTPUT_CONSOLE], $fim_cv_want_no_output_console, [Output console. (enabled by default)])
-fi
-dnl ==================
-AH_TEMPLATE([FIM_WANT_UNICODE])
-AC_ARG_ENABLE(unicode, AC_HELP_STRING([--enable-unicode], [Unicode. (disabled by default)]), [       if test x$enableval = xyes; then fim_cv_want_unicode=1 ; else fim_cv_want_unicode=0 ; fi ],[ fim_cv_want_unicode=0 ])
-if test x$fim_cv_want_unicode == x1 ; then 
-	CXXFLAGS="$CXXFLAGS `freetype-config --cflags`"
-	LIBS="$LIBS `freetype-config --libs`"
-	AC_DEFINE_UNQUOTED([FIM_WANT_UNICODE], $fim_cv_want_unicode, [Unicode. (disabled by default)])
-fi
-dnl ==================
-AH_TEMPLATE([FIM_WANT_TEXT_RENDERING])
-fim_want_astext=yes
-AC_ARG_ENABLE(as-text-rendering, AC_HELP_STRING([--disable-as-text-rendering], [Disable as-text rendering (viewing of any file as character bytes -- not to be confused with the ASCII art output).]),
-[       if test x$enableval = xno ; then
-		fim_want_astext=no
-        fi
-])
-if test x$fim_want_astext = xyes ; then
-	AC_DEFINE_UNQUOTED([FIM_WANT_TEXT_RENDERING], 1, [Enables text rendering])
-fi
-dnl ==================
-AH_TEMPLATE([FIM_WANT_RAW_BITS_RENDERING])
-fim_want_rbr=yes
-AC_ARG_ENABLE(raw-bits-rendering, AC_HELP_STRING([--disable-raw-bits-rendering], [Disable raw bits rendering (viewing of any file as either a 1 or 24 bpp bitmap).]),
-[       if test x$enableval = xno ; then
-		fim_want_rbr=no
-        fi
-])
-if test x$fim_want_rbr = xyes ; then
-	AC_DEFINE_UNQUOTED([FIM_WANT_RAW_BITS_RENDERING], 1, [Enables raw bits rendering])
-fi
-dnl ==================
-AH_TEMPLATE([FIM_ALLOW_LOADER_STRING_SPECIFICATION])
-fim_want_lss=yes
-AC_ARG_ENABLE(loader-string-specification, AC_HELP_STRING([--disable-loader-string-specification], [Disables the chance to specify a file loader.]),
-[       if test x$enableval = xno ; then
-		fim_want_lss=no
-        fi
-])
-if test x$fim_want_lss = xyes ; then
-	AC_DEFINE_UNQUOTED([FIM_ALLOW_LOADER_STRING_SPECIFICATION], 1, [Allows the user to specify a file loader])
-fi
-dnl ==================
-
-dnl uhmmmmmm : does not seem to work
+dnl uhmmmmmm : doesn't seem to work
 dnl AC_ARG_ENABLE(verbose_make,[Enables verbose macros passing to the compiler (for a funnier compilation process.)], 
 dnl         if test x$enableval = xyes; then
 dnl		AC_SUBST(DEFS)
@@ -1788,8 +1395,8 @@ AH_TEMPLATE([FIM_BUGGED_CACHE])
 dnl AC_DEFINE([FIM_BUGGED_CACHE])
 AH_TEMPLATE([FIM_VERSION])
 AC_DEFINE_UNQUOTED([FIM_VERSION],"${VERSION}")
-dnl AH_TEMPLATE([FIM_USE_X11_FONTS])
-dnl AC_DEFINE([FIM_USE_X11_FONTS])
+AH_TEMPLATE([X_DISPLAY_MISSING])
+AC_DEFINE([X_DISPLAY_MISSING])
 AH_TEMPLATE([FIM_TMP_FILENAME])
 AC_DEFINE_UNQUOTED([FIM_TMP_FILENAME],"$fim_cv_tmpfile")
 AH_TEMPLATE([FIM_ITERATED_COMMANDS])
@@ -1801,51 +1408,35 @@ AC_DEFINE([FIM_EXPERIMENTAL_ROTATION])
 AH_TEMPLATE([FIM_KEEP_BROKEN_CONSOLE])
 dnl AC_DEFINE([FIM_KEEP_BROKEN_CONSOLE])
 AH_TEMPLATE([FIM_PIPE_IMAGE_READ])
-AC_DEFINE([FIM_PIPE_IMAGE_READ])
+dnl AC_DEFINE([FIM_PIPE_IMAGE_READ])
 AH_TEMPLATE([FIM_USE_DESIGNATED_INITIALIZERS])
 dnl AC_DEFINE([FIM_USE_DESIGNATED_INITIALIZERS])
 dnl AH_TEMPLATE([FIM_IS_SLOWER_THAN_FBI])
 dnl AC_DEFINE([FIM_IS_SLOWER_THAN_FBI])
 dnl AH_TEMPLATE([FIM_WITH_LIBSDL])
 dnl AC_DEFINE([FIM_WITH_LIBSDL])
-AH_TEMPLATE([FBI_AUTHOR])
-AH_TEMPLATE([FBI_AUTHOR_NAME])
 AH_TEMPLATE([FIM_AUTHOR])
-AH_TEMPLATE([FIM_AUTHOR_NAME])
-AH_TEMPLATE([FIM_AUTHOR_EMAIL])
-AC_DEFINE([FIM_AUTHOR_NAME],["Michele Martone"])
-AC_DEFINE([FIM_AUTHOR_EMAIL],["<dezperado _CUT_ autistici _CUT_ org>"])
 AC_DEFINE([FIM_AUTHOR],["Michele Martone <dezperado _CUT_ autistici _CUT_ org>"])
-# Note: Gerd changed his surname from Knorr to Hoffmann, so I report here his actual surname
-AC_DEFINE([FBI_AUTHOR_NAME],["Gerd Hoffmann"])
-AC_DEFINE([FBI_AUTHOR],["Gerd Hoffmann <kraxel _CUT_ bytesex.org>"])
 dnl ###############################################################################
 dnl this is experimental stuff
 dnl ###############################################################################
-AC_ARG_ENABLE(matrices-rendering, AC_HELP_STRING([--enable-matrices-rendering], [Uses librsb for rendering of Matrix Market files (must have librsb-config in the PATH).]),
-[       if test x$enableval = xyes; then
-        	if test x$ac_cv_func_rsb_lib_init = xyes; then
-AH_TEMPLATE([HAVE_MATRIX_MARKET_DECODER])
-AC_DEFINE([HAVE_MATRIX_MARKET_DECODER])
-#CXXFLAGS="$CXXFLAGS `librsb-config  --cflags`"
-#LIBS="$LIBS `librsb-config --static --ldflags | sed s/-static//g`"
-		else
-			AC_MSG_ERROR([Cannot detect librsb! Either disable matrix rendering or supply the right LIBS and CXXFLAGS!])
-        	fi
-	else
-		true;
-        fi
-])
+dnl AH_TEMPLATE([HAVE_MATRIX_MARKET_DECODER])
+dnl AC_DEFINE([HAVE_MATRIX_MARKET_DECODER])
+dnl CXXFLAGS="$CXXFLAGS -I${HOME}/src/libmmvbr/"
+dnl LIBS="$LIBS -L${HOME}/src/libmmvbr/ -lmmvbr"
 dnl ###############################################################################
 
 
 dnl ==================
 
+AC_SUBST(LIBIMAP)
+AC_SUBST(LIBIMAPDEPS)
+
 AC_SUBST(LIBS)
 AC_SUBST(FIM_DEFS)
 
 AC_SUBST(FIM_LIB_OBJECTS)
-AC_SUBST(FIM_SVN_REPOSITORY,[http://svn.savannah.nongnu.org/svn/fbi-improved/])
+AC_SUBST(FIM_SVN_REPOSITORY,[http://code.autistici.org/svn/fim/])
 
 dnl we want these symbols defined in our code
 AC_SUBST(CXXFLAGS)
@@ -1861,61 +1452,58 @@ AC_OUTPUT(Makefile src/Makefile doc/Makefile distros/Makefile scripts/Makefile
 #AC_OUTPUT
 
 AC_MSG_NOTICE([
-	Fim v${VERSION} has been configured as follows (features marked with * are not recommended):
+	Fim v${VERSION} has been configured as follows:
 
-   	default minimal key mapping         : ${have_default_mapping:-no}
-   	default minimal key bindings        : ${have_default_bindings:-no}
+	default minimal key mapping         : ${have_default_mapping:-no}
+	readline library support            : ${fim_want_readline}
+	default minimal key bindings        : ${have_default_bindings:-no}
 	default configuration file builtin  : ${have_default_config:-no}
-dnl     compile time warnings               : ${fim_cv_warnings:-no} (additional CXXFLAGS: ${CXXFLAGS} )
+        compile time warnings               : ${fim_cv_warnings:-no} (additional CXXFLAGS: ${CXXFLAGS} )
         resize optimizations                : ${fim_cv_resize_optimizations:-no}
         system,popen calls wrappers enabled : ${fim_system_calls:-yes}
-   	will allow push of directories      : ${fim_cv_read_dirs}
-   	will recurse directories (-R switch): ${fim_cv_recursive_dirs}
+	will read directories               : ${fim_cv_read_dirs}
+	will recurse directories            : ${fim_cv_recursive_dirs}
+	png  file support                   : ${fim_handle_png:-no}
+	jpeg file support                   : ${fim_handle_jpeg:-no}
+	tiff file support                   : ${fim_handle_tiff:-no}
+	gif  file support                   : ${fim_handle_gif:-no}
+	djvu file support                   : ${fim_handle_djvu:-no}
+	pdf  file support (libpoppler)      : ${fim_handle_pdf:-no}
+	ps   file support (libspectre)      : ${fim_handle_ps:-no}
 dnl	dvi  file support (dvilib29)        : ${fim_handle_dvi:-no}
 	patch for running under screen      : ${fim_cv_screen:-no}
-	~/.fimrc startup file support       : ${have_fimrc:-no}
-	~/.fim_history load/save support    : ${have_history:-no}
+	~/.fimrc file loading on startup    : ${have_fimrc:-no}
 	autocommands enabled                : ${have_autocommands:-no}
-dnl	internal windowing system           : ${have_windows:-no}
-	hardcoded PSF font (FBFONT=fim://)  : ${have_hardcoded_font:-no}
+	internal windowing system           : ${have_windows:-no}
 	will read image files from stdin(-i): ${fim_cv_read_stdin_image:-no}
-	GNU regexps (default is Posix)      :*${fim_cv_regex:-no}
-        seek magic signatures               :*${fim_cv_seek_magic:-no}
-	customizable status bar             : ${fim_cv_custom_status_bar:-no}
-dnl
-	readline (-lrl) library support     : ${fim_want_readline}
-	use 'xcftopnm' for XCF files        :*${fim_cv_xcftopnm}
+	GNU regexp's (default is Posix)     : ${fim_cv_regex:-no}
+	use 'xcftopnm' for XCF files        : ${fim_cv_xcftopnm}
+	use 'convert' for unknown files     : ${fim_cv_convert}
 	use 'inkscape' for SVG files        : ${fim_cv_inkscape}
 	use 'fig2dev' for FIG files         : ${fim_cv_xfig}
-	use 'convert' for unrecognized files:*${fim_cv_convert}
-	use 'exiftool' for EXIF tags in JPEG:*${fim_cv_exiftool}
-dnl
-        framebuffer (built-in) support      : ${fim_handle_framebuffer:-yes}
-	X        (sdllib) support (-o sdl)  : ${fim_handle_sdl}
-	ASCII art (aalib) support (-o aa)   : ${fim_cv_aalib}
-	X        (Imlib2) support(-o imlib2):*${fim_handle_imlib2:-no}
-	coloured ASCII art (cacalib) support:*${fim_cv_cacalib}
-dnl
-   	EXIF (JPEG) tags support (libexif)  : ${fim_cv_libexif}
-	BMP      file support (builtin)     : ${fim_handle_bmp:-no}
-	JP2 (JPEG-2K) file support (JasPer) : ${fim_cv_libjasper}
-	PCX      file support (builtin)     : ${fim_handle_pcx:-no}
-	PNG      file support (libpng)      : ${fim_handle_png:-no}
-	JPEG     file support (libjpeg)     : ${fim_handle_jpeg:-no}
-	TIFF     file support (libtiff)     : ${fim_handle_tiff:-no}
-	GIF      file support (libgif)      : ${fim_handle_gif:-no}
-	DJVU     file support (libdjvu)     :*${fim_handle_djvu:-no}
-	PDF      file support (libpoppler)  :*${fim_handle_pdf:-no}
-	PS       file support (libspectre)  :*${fim_handle_ps:-no}
-	NEF/RAW  file support (libufraw)    :*${fim_handle_ufraw:-no}
-	TAR/ZIP/.. file support (libarchive):*${fim_handle_archive:-no}
-	GraphicsMagick support (libGraphicsMagick):*${fim_handle_graphicsmagick:-no}
+	ascii art (aalib) support           : ${fim_cv_aalib}
+	X (sdllib) experimental support     : ${fim_handle_sdl}
+        framebuffer support                 : ${fim_handle_framebuffer:-yes}
+        seek magic signatures               : ${fim_cv_seek_magic:-no}
+dnl	coloured ascii art (cacalib) support: ${fim_cv_cacalib}
 
-	If you are not satisfied with this configuration, please invoke
+
+	If you are not satisfied with this configuration, please run :
+
 	  ./configure --help=short
+
 	for a complete list of configure options specific to Fim.
-	When you are satisfied, run 'make' to build Fim and its documentation.
+
+	If you are satisfied, run 'make' to build Fim and its documentation.
+	Otherwise, 'make fim' to build only Fim.
+
 	To install the program and its documentation, run 'make install' if you are root,
 	or run 'su -c '"make install"' if you are not root.
-	RTFM: README, man fim, man fimrc.  Enjoy!
+
+	p.s.: documentation is found in the doc/ directory !
+	Please see doc/FIM.TXT, doc/FIM.html, doc/fim.man.
+
+	Enjoy! Please see the BUGS file for bug reports, and the documentation anyway!
 ])
+
+

@@ -19,7 +19,7 @@ stdout "";
 i:ascale=2;
 i:scale=2;
 # FIXME : workaround
-if(_device_string=="aalib") { ascale=ascale*2; }
+if(_device_driver=="aalib") { ascale=ascale*2; }
 magnify;
 reduce;
 display;

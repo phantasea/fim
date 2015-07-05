@@ -1,8 +1,8 @@
-/* $LastChangedDate: 2014-11-17 19:22:17 +0100 (Mon, 17 Nov 2014) $ */
+/* $Id: FbiStuffPpm.cpp 271 2009-12-13 00:03:48Z dezperado $ */
 /*
  FbiStuffPpm.cpp : fbi functions for PPM files, modified for fim
 
- (c) 2008-2014 Michele Martone
+ (c) 2008-2009 Michele Martone
  (c) 1998-2006 Gerd Knorr <kraxel@bytesex.org>
 
     This program is free software; you can redistribute it and/or modify
@@ -31,11 +31,10 @@
 #include <errno.h>
 
 //#include "loader.h"
-#include "fim.h"
 #include "FbiStuffLoader.h"
 #ifdef USE_X11
 # include "viewer.h"
-#endif /* USE_X11 */
+#endif
 
 /* ---------------------------------------------------------------------- */
 /* load                                                                   */
@@ -46,18 +45,19 @@ namespace fim
 struct ppm_state {
     FILE          *infile;
     int           width,height;
-    fim_byte_t *row;
+    unsigned char *row;
 };
 
 static void*
-pnm_init(FILE *fp, const fim_char_t *filename, unsigned int page,
+pnm_init(FILE *fp, char *filename, unsigned int page,
 	 struct ida_image_info *i, int thumbnail)
 {
     struct ppm_state *h;
-    fim_char_t line[FIM_FBI_PPM_LINEBUFSIZE],*fr;
+    char line[1024],*fr;
 
-    h = (struct ppm_state*) fim_calloc(1,sizeof(*h));
+    h = (struct ppm_state*) fim_calloc(sizeof(*h),1);
     if(!h)return NULL;
+    memset(h,0,sizeof(*h));
 
     h->infile = fp;
     fr=fgets(line,sizeof(line),fp); /* Px */
@@ -77,35 +77,35 @@ pnm_init(FILE *fp, const fim_char_t *filename, unsigned int page,
     i->width  = h->width;
     i->height = h->height;
     i->npages = 1;
-    h->row = (fim_byte_t*)fim_malloc(h->width*3);
+    h->row = (unsigned char*)fim_malloc(h->width*3);
     if(!h->row)goto oops;
 
     return h;
 
  oops:
-    fim_fclose(fp);
+    fclose(fp);
     if(h->row)fim_free(h->row);
     if(h)fim_free(h);
     return NULL;
 }
 
 static void
-ppm_read(fim_byte_t *dst, unsigned int line, void *data)
+ppm_read(unsigned char *dst, unsigned int line, void *data)
 {
     struct ppm_state *h = (struct ppm_state *) data;
     int fr;
-    fr=fim_fread(dst,h->width,3,h->infile);
+    fr=fread(dst,h->width,3,h->infile);
     if(fr){/* FIXME : there should be error handling */}
 }
 
 static void
-pgm_read(fim_byte_t *dst, unsigned int line, void *data)
+pgm_read(unsigned char *dst, unsigned int line, void *data)
 {
     struct ppm_state *h = (struct ppm_state *) data;
-    fim_byte_t *src;
+    unsigned char *src;
     int x,fr;
 
-    fr=fim_fread(h->row,h->width,1,h->infile);
+    fr=fread(h->row,h->width,1,h->infile);
     if(!fr){/* FIXME : there should be error handling */ return ; }
     src = h->row;
     for (x = 0; x < h->width; x++) {
@@ -122,7 +122,7 @@ pnm_done(void *data)
 {
     struct ppm_state *h = (struct ppm_state *) data;
 
-    fim_fclose(h->infile);
+    fclose(h->infile);
     fim_free(h->row);
     fim_free(h);
 }
@@ -131,7 +131,7 @@ struct ida_loader ppm_loader = {
     /*magic:*/ "P6",
     /*moff:*/  0,
     /*mlen:*/  2,
-    /*name:*/  "ppm",
+    /*name:*/  "ppm parser",
     /*init:*/  pnm_init,
     /*read:*/  ppm_read,
     /*done:*/  pnm_done,
@@ -141,7 +141,7 @@ struct ida_loader pgm_loader = {
     /*magic:*/ "P5",
     /*moff:*/  0,
     /*mlen:*/  2,
-    /*name:*/  "pgm",
+    /*name:*/  "pgm parser",
     /*init:*/  pnm_init,
     /*read:*/  pgm_read,
     /*done:*/  pnm_done,
@@ -149,8 +149,8 @@ struct ida_loader pgm_loader = {
 
 static void __init init_rd(void)
 {
-    fim_load_register(&ppm_loader);
-    fim_load_register(&pgm_loader);
+    load_register(&ppm_loader);
+    load_register(&pgm_loader);
 }
 
 #ifdef USE_X11
@@ -177,9 +177,9 @@ static struct ida_writer ppm_writer = {
 
 static void __init init_wr(void)
 {
-    fim_write_register(&ppm_writer);
+    write_register(&ppm_writer);
 }
-#endif /* USE_X11 */
+#endif
 
 }
 

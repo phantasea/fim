@@ -1,8 +1,8 @@
-/* $LastChangedDate: 2015-02-11 08:49:13 +0100 (Wed, 11 Feb 2015) $ */
+/* $Id: fim_stream.cpp 179 2008-12-21 16:40:11Z dezperado $ */
 /*
  fim_stream.cpp : Textual output facility
 
- (c) 2007-2015 Michele Martone
+ (c) 2007-2008 Michele Martone
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -25,70 +25,37 @@
 
 namespace fim
 {
-		fim_stream::fim_stream(fim_str_t fd):fd_(fd)
+		fim_stream& fim_stream::operator<<(const unsigned char* s)
 		{
-		}
-
-		fim_stream& fim_stream::operator<<(const fim_byte_t* s)
-		{
-			*this<<(const fim_char_t*)s;
+			*this<<(const char*)s;
 			return *this;
 		}
 
 
 		fim_stream& fim_stream::operator<<(const  fim::string&s)
 		{
-			*this<<(const  fim_char_t*)(s.c_str());
+			*this<<(const  char*)(s.c_str());
 			return *this;
 		}
 
 
 		fim_stream& fim_stream::operator<<(float f)
 		{
-			fim_char_t s[FIM_ATOX_BUFSIZE];sprintf(s,"%f",f);
-			*this<<(const fim_char_t*)s;
+			char s[32];sprintf(s,"%f",f);
+			*this<<(const char*)s;
 			return *this;
 		}
 
 		fim_stream& fim_stream::operator<<(int i)
 		{
-			fim_char_t s[FIM_ATOX_BUFSIZE];sprintf(s,"%d",i);
+			char s[32];sprintf(s,"%d",i);
 			*this<<s;
 			return *this;
 		}
 
-#if FIM_WANT_LONG_INT
-		fim_stream& fim_stream::operator<<(fim_int i)
+		fim_stream& fim_stream::operator<<(const  char* s)
 		{
-			/* FIXME */
-			fim_char_t s[FIM_ATOX_BUFSIZE];
-			if(sizeof(fim_int)==sizeof(int))
-				sprintf(s,"%d",(int)i);
-			else
-				sprintf(s,"%lld",(long long int)i);
-			*this<<s;
-			return *this;
-		}
-#endif /* FIM_WANT_LONG_INT */
-
-		fim_stream& fim_stream::operator<<(const  fim_char_t* s)
-		{
-			if(s)
-			{
-				if(fd_<=-1)
-					cc.status_screen(s);
-				else
-				{
-					// 0 == dumb (no output)
-					if(fd_==1)
-						std::cout << s ;
-					else
-					{
-						if(fd_>=2)
-							std::cerr << s ;
-					}
-				}
-			}
+			if(s)cc.status_screen(s);
 			//else if(s)printf("%s",s);
 
 			return *this;

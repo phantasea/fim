@@ -1,8 +1,8 @@
-/* $LastChangedDate: 2013-07-04 19:38:23 +0200 (Thu, 04 Jul 2013) $ */
+/* $Id: Command.cpp 194 2008-12-30 01:47:18Z dezperado $ */
 /*
  Command.cpp :
 
- (c) 2007-2013 Michele Martone
+ (c) 2007-2008 Michele Martone
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by

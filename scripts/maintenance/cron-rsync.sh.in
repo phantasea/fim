@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# $Id: cron-rsync.sh.in 633 2014-11-16 22:13:14Z dezperado $
+# $Id: cron-rsync.sh.in 221 2009-02-26 21:23:28Z dezperado $
 #
 # This script is intended to work on machines which I administer which are connected to the
 # internet and which can take backups of fim, nightly and gently.
@@ -15,6 +15,7 @@
 # @weekly         FIM_REPUSER=antani FIM_BACKUPDIR=/var/backups/fim /usr/local/bin/cron-rsync.sh
 
 R=${FIM_REPURL:="http://@FIM_SVN_REPOSITORY@"};
+#FIM_REPURL=${R:="http://code.autistici.org:/svn/fim/"};
 U=${FIM_REPUSER:="dezperado"}
 BP=${FIM_BACKUPDIR:="/backups/fim"}
 R=`echo $R | sed s/^http:..//g`

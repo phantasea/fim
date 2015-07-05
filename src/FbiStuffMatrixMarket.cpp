@@ -1,8 +1,8 @@
-/* $LastChangedDate: 2014-11-17 19:22:17 +0100 (Mon, 17 Nov 2014) $ */
+/* $Id: FbiStuffPdf.cpp 224 2009-03-06 00:12:20Z dezperado $ */
 /*
  FbiStuffMatrixMarket.cpp : fim functions for decoding Matrix Market files
 
- (c) 2009-2014 Michele Martone
+ (c) 2009 Michele Martone
  based on code (c) 1998-2006 Gerd Knorr <kraxel@bytesex.org>
 
     This program is free software; you can redistribute it and/or modify
@@ -20,6 +20,10 @@
     Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
 */
 
+/*
+ * this code should be fairly correct, although unfinished
+ * */
+
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -30,7 +34,8 @@
 #ifdef HAVE_MATRIX_MARKET_DECODER
 
 /* This is an experimental library of mine, yet unreleased */
-#include <rsb.h>
+#include <vbr.h>
+#include <util.h>
 
 namespace fim
 {
@@ -39,8 +44,8 @@ namespace fim
 /* load                                                                   */
 
 struct mm_state_t {
-	fim_char_t * filename;
-	fim_byte_t * first_row_dst;
+	char * filename;
+	unsigned char * first_row_dst;
 	int width  ;
 	int height ;
 };
@@ -49,32 +54,26 @@ struct mm_state_t {
 /* ---------------------------------------------------------------------- */
 
 static void*
-mm_init(FILE *fp, const fim_char_t *filename, unsigned int page,
+mm_init(FILE *fp, char *filename, unsigned int page,
 	  struct ida_image_info *i, int thumbnail)
 {
-	rsb_coo_idx_t rows,cols;
+	size_t rows,cols;
 	struct mm_state_t *h;
-	h = (struct mm_state_t *)fim_calloc(1,sizeof(*h));
-	int rows_max=FIM_RENDERING_MAX_ROWS,cols_max=FIM_RENDERING_MAX_COLS;
+	h = (struct mm_state_t *)fim_calloc(sizeof(*h),1);
+	int rows_max=1024,cols_max=1024;
 //	int rows_max=2048,cols_max=2048;
 
 	if(!h)goto err;
     	h->first_row_dst=NULL;
 
 	h->filename=NULL;
-	i->dpi    = FIM_RENDERING_DPI; /* FIXME */
+	i->dpi    = 72; /* FIXME */
 	i->npages = 1; // uhm
 
-	if(rsb_lib_init(RSB_NULL_INIT_OPTIONS))
-		goto err;
-
-	if(rsb_file_mtx_get_dimensions(filename, &cols, &rows, NULL, NULL))
+	if(vbr_util_get_matrix_dimensions(filename, &cols, &rows))
 		goto err;
 
 #if 1
-	if(cols<1 || rows<1)
-		goto err;
-
 	if(cols>cols_max)
 		cols=cols_max;
 	if(rows>rows_max)
@@ -98,7 +97,7 @@ err:
 }
 
 static void
-mm_read(fim_byte_t *dst, unsigned int line, void *data)
+mm_read(unsigned char *dst, unsigned int line, void *data)
 {
 	struct mm_state_t *h = (struct mm_state_t*)data;
 
@@ -108,11 +107,7 @@ mm_read(fim_byte_t *dst, unsigned int line, void *data)
 	else
 		return;
 
-#if 0
-	if(rsb_get_pixmap_RGB_from_matrix(h->filename, dst, h->width, h->height))
-#else
-	if(rsb_file_mtx_render(dst,h->filename,h->width,h->width,h->height,RSB_MARF_RGB))
-#endif
+	if(vbr_get_pixmap_RGB_from_matrix(h->filename, dst, h->width, h->height))
 		goto err;
 err:
 	return;
@@ -126,9 +121,6 @@ mm_done(void *data)
 		goto err;
 	if(h->filename)
 		fim_free(h->filename);
-
-	if(rsb_lib_exit(RSB_NULL_EXIT_OPTIONS))
-		goto err;
 err:
 	return;
 }
@@ -140,7 +132,7 @@ static struct ida_loader mm_loader = {
     magic: "%%MatrixMarket matrix",
     moff:  0,
     mlen:  20,
-    name:  "MatrixMarket",
+    name:  "matrix market",
     init:  mm_init,
     read:  mm_read,
     done:  mm_done,
@@ -148,7 +140,7 @@ static struct ida_loader mm_loader = {
 
 static void __init init_rd(void)
 {
-    fim_load_register(&mm_loader);
+    load_register(&mm_loader);
 }
 
 }

@@ -1,8 +1,8 @@
-/* $LastChangedDate: 2014-11-17 19:22:17 +0100 (Mon, 17 Nov 2014) $ */
+/* $Id: FbiStuffTiff.cpp 271 2009-12-13 00:03:48Z dezperado $ */
 /*
  FbiStuffTiff.cpp : fbi functions for TIFF files, modified for fim
 
- (c) 2007-2014 Michele Martone
+ (c) 2007-2009 Michele Martone
  (c) 1998-2006 Gerd Knorr <kraxel@bytesex.org>
 
     This program is free software; you can redistribute it and/or modify
@@ -30,18 +30,19 @@
 #include <inttypes.h>
 #include <tiffio.h>
 
+//#include "loader.h"
 #include "FbiStuff.h"
 #include "FbiStuffLoader.h"
 #ifdef USE_X11
 # include "viewer.h"
-#endif /* USE_X11 */
+#endif
 
 namespace fim
 {
 
 struct tiff_state {
     TIFF*          tif;
-    //char           emsg[FIM_LIBERR_BUFSIZE];
+    char           emsg[1024];
     tdir_t         ndirs;     /* Number of directories                     */
                               /* (could be interpreted as number of pages) */
     uint32         width,height;
@@ -53,14 +54,15 @@ struct tiff_state {
 };
 
 static void*
-tiff_init(FILE *fp, const fim_char_t *filename, unsigned int page,
+tiff_init(FILE *fp, char *filename, unsigned int page,
 	  struct ida_image_info *i, int thumbnail)
 {
-    struct tiff_state *h=NULL;
+    struct tiff_state *h;
 
     fclose(fp);
-    h = (struct tiff_state *) fim_calloc(1,sizeof(*h));
+    h = (struct tiff_state *) fim_calloc(sizeof(*h),1);
     if(!h)goto oops;
+    memset(h,0,sizeof(*h));
 
     TIFFSetWarningHandler(NULL);
     h->tif = TIFFOpen(filename,"r");
@@ -85,11 +87,11 @@ tiff_init(FILE *fp, const fim_char_t *filename, unsigned int page,
     h->row = (uint32*)fim_malloc(TIFFScanlineSize(h->tif));
     if(!h->row)goto oops;
     if (FbiStuff::fim_filereading_debug())
-#ifndef FIM_PRId32
-#define FIM_PRId32 "x"
-#endif /* FIM_PRId32 */
-	FIM_FBI_PRINTF("tiff: %" FIM_PRId32 "x%" FIM_PRId32 ", planar=%d, "
-		"nsamples=%d, depth=%d fo=%d pm=%d scanline=%" FIM_PRId32 "\n",
+#ifndef PRId32
+#define PRId32 "x"
+#endif
+	FIM_FBI_PRINTF("tiff: %" PRId32 "x%" PRId32 ", planar=%d, "
+		"nsamples=%d, depth=%d fo=%d pm=%d scanline=%" PRId32 "\n",
 //	FIM_FBI_PRINTF("tiff: %" "%d" "x%" "%d" ", planar=%d, "
 //		"nsamples=%d, depth=%d fo=%d pm=%d scanline=%" "%d" "\n",
 		h->width,h->height,h->config,h->nsamples,h->depth,
@@ -146,7 +148,7 @@ tiff_init(FILE *fp, const fim_char_t *filename, unsigned int page,
 }
 
 static void
-tiff_read(fim_byte_t *dst, unsigned int line, void *data)
+tiff_read(unsigned char *dst, unsigned int line, void *data)
 {
     struct tiff_state *h = (struct tiff_state *) data;
     int s,on,off;
@@ -154,7 +156,7 @@ tiff_read(fim_byte_t *dst, unsigned int line, void *data)
     if (h->image) {
 	/* loaded whole image using TIFFReadRGBAImage() */
 	uint32 *row = h->image + h->width * (h->height - line -1);
-	load_rgba(dst,(fim_byte_t*)row,h->width);
+	load_rgba(dst,(unsigned char*)row,h->width);
 	return;
     }
     
@@ -177,15 +179,15 @@ tiff_read(fim_byte_t *dst, unsigned int line, void *data)
 #if 0
 	    /* Huh?  Does TIFFReadScanline handle this already ??? */
 	    if (FILLORDER_MSB2LSB == h->fillorder)
-		load_bits_msb(dst,(fim_byte_t*)(h->row),h->width,on,off);
+		load_bits_msb(dst,(unsigned char*)(h->row),h->width,on,off);
 	    else
-		load_bits_lsb(dst,(fim_byte_t*)(h->row),h->width,on,off);
+		load_bits_lsb(dst,(unsigned char*)(h->row),h->width,on,off);
 #else
-	    load_bits_msb(dst,(fim_byte_t*)(h->row),h->width,on,off);
+	    load_bits_msb(dst,(unsigned char*)(h->row),h->width,on,off);
 #endif
 	} else {
 	    /* grayscaled */
-	    load_gray(dst,(fim_byte_t*)(h->row),h->width);
+	    load_gray(dst,(unsigned char*)(h->row),h->width);
 	}
 	break;
     case 3:
@@ -194,7 +196,7 @@ tiff_read(fim_byte_t *dst, unsigned int line, void *data)
 	break;
     case 4:
 	/* rgb+alpha */
-	load_rgba(dst,(fim_byte_t*)(h->row),h->width);
+	load_rgba(dst,(unsigned char*)(h->row),h->width);
 	break;
     }
 }
@@ -216,7 +218,7 @@ static struct ida_loader tiff1_loader = {
     /*magic:*/ "MM\x00\x2a",
     /*moff:*/  0,
     /*mlen:*/  4,
-    /*name:*/  "libtiff-MM",
+    /*name:*/  "libtiff",
     /*init:*/  tiff_init,
     /*read:*/  tiff_read,
     /*done:*/  tiff_done,
@@ -225,7 +227,7 @@ static struct ida_loader tiff2_loader = {
     /*magic:*/ "II\x2a\x00",
     /*moff:*/  0,
     /*mlen:*/  4,
-    /*name:*/  "libtiff-II",
+    /*name:*/  "libtiff",
     /*init:*/  tiff_init,
     /*read:*/  tiff_read,
     /*done:*/  tiff_done,
@@ -233,8 +235,8 @@ static struct ida_loader tiff2_loader = {
 
 static void __init init_rd(void)
 {
-    fim_load_register(&tiff1_loader);
-    fim_load_register(&tiff2_loader);
+    load_register(&tiff1_loader);
+    load_register(&tiff2_loader);
 }
 
 #ifdef USE_X11
@@ -286,9 +288,9 @@ static struct ida_writer tiff_writer = {
 
 static void __init init_wr(void)
 {
-    fim_write_register(&tiff_writer);
+    write_register(&tiff_writer);
 }
 
-#endif /* USE_X11 */
+#endif
 }
 

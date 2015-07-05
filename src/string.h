@@ -1,10 +1,10 @@
-/* $LastChangedDate: 2015-02-11 08:43:28 +0100 (Wed, 11 Feb 2015) $ */
+/* $Id: string.h 269 2009-12-08 23:45:10Z dezperado $ */
 #ifndef FIM_STRING_H
 #define FIM_STRING_H
 /*
  string.h : Fim's own string implementation header file
 
- (c) 2007-2015 Michele Martone
+ (c) 2007-2009 Michele Martone
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -42,7 +42,7 @@ namespace fim
 	/*
 	 *	Allocation and duplication of a single string
 	 */
-	static fim_char_t * fim_dupstr (const fim_char_t* s);
+	static char * fim_dupstr (const char* s);
 
 	class string{
 	/*
@@ -54,55 +54,55 @@ namespace fim
 	 */
         static const int TOKSIZE=128*8*4*2;	//max len.NUL included
 #ifdef _FIM_DYNAMIC_STRING
-	fim_char_t*s;		/* the string : can be NULL */
+	char*s;		/* the string : can be NULL */
 	int len;	/* the allocated amount */
 	std::string ss;
-#else /* _FIM_DYNAMIC_STRING */
-	fim_char_t s[TOKSIZE];
-#endif /* _FIM_DYNAMIC_STRING */
+#else
+	char s[TOKSIZE];
+#endif
 	public :
-	void _string_init(void);
+	void _string_init();
 
 	int reallocate(int l);
 
 	int reset(int l);
 
-	bool isempty(void)const;
+	bool isempty()const;
 
-	virtual ~string(void);//virtual, as -Weffc++ suggests
-	string(void);
+	virtual ~string();//virtual, as -Weffc++ suggests
+	string();
 	string(const string& s);
-	string(const fim_char_t *str);
+	string(const char *str);
 	string(const int i);
 	string(const unsigned int i);
-	const fim_char_t*c_str(void)const;
+	const char*c_str()const;
 	bool operator==(const string& s)const;
-	bool operator==(const fim_char_t *  s)const;
+	bool operator==(const char *  s)const;
 	bool operator!=(const string& s)const;
 	bool operator<=(const string& s)const;
 	bool operator>=(const string& s)const;
 	bool operator <(const string& s)const;
 	bool operator >(const string& s)const;
-	bool operator >(const fim_char_t *s)const;
-	bool operator <(const fim_char_t *s)const;
+	bool operator >(const char *s)const;
+	bool operator <(const char *s)const;
 
 	string& operator =(const string& s);
 	string operator+=(const string& s);
 	string operator+(const string& s)const;
 	int  reinit(const int n)const;
-	int  length(void)const;
-	static int  max_string(void){return TOKSIZE-1;}
-	int  size(void)const;
+	int  length()const;
+	static int  max_string(){return TOKSIZE-1;}
+	int  size()const;
 	int  find(const string&str)const;
 	int  assign(const string&str);
-	int  assign(const fim_char_t*str);
-	int  find(const fim_char_t*ss)const;
+	int  assign(const char*str);
+	int  find(const char*ss)const;
  	std::ostream& print(std::ostream &os)const;
 //	int operator=(int &i,const string& s){i=-1;return i;}
-	operator int(void)const;
-	operator float(void)const;
+	operator int()const{return atoi(s);}
+	operator float()const{return fim_atof(s);}
 	};
-#else /* _FIM_STRING_WRAPPER */
+#else
 	class string:public std::string
 	{
 		public:
@@ -117,40 +117,30 @@ namespace fim
 			 terminate called after throwing an instance of 'std::logic_error'
 			 what():  basic_string::_S_construct NULL not valid
 		*/
-		string(const std::string&s):std::string(s){}
-		string(const fim_char_t*s):std::string(s?s:""){}
+		string(const char*s):std::string(s?s:""){}
 
-		string(fim_char_t c);
-#if FIM_WANT_LONG_INT
 		string(int i);
-#endif /* FIM_WANT_LONG_INT */
-		string(fim_int i);
-		string(float i);
 		string(int * i);
-		string(size_t i);
 
 /*
  		the following two operators are very nice to use but pose unexpected problems.		
 */
- 		operator fim_int  (void)const;
-#if FIM_WANT_LONG_INT
- 		operator int  (void)const;
-#endif /* FIM_WANT_LONG_INT */
-		operator float(void)const;
+ 		operator int  ()const{return atoi(this->c_str());}
+		operator float()const{return fim_atof(this->c_str());}
 
 		string operator+(const string s)const;
 		/* copy constructor */
 		string(const string& s);
-		bool re_match(const fim_char_t*r)const;
-		void substitute(const fim_char_t*r, const fim_char_t* s, int flags=0);
+		bool re_match(const char*r)const;
+		void substitute(const char*r, const char* s, int flags=0);
 		fim::string line(int ln)const;
-		size_t lines(void)const;
-		int find_re(const fim_char_t*r,int *mbuf=NULL)const;
+		size_t lines()const;
+		int find_re(const char*r,int *mbuf=NULL)const;
 	};
 
 
-#endif /* _FIM_STRING_WRAPPER */
+#endif
 }
 
 
-#endif /* FIM_STRING_H */
+#endif

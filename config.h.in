@@ -13,22 +13,7 @@
 #undef EXECSHELL
 
 /* */
-#undef FBI_AUTHOR
-
-/* */
-#undef FBI_AUTHOR_NAME
-
-/* Allows the user to specify a file loader */
-#undef FIM_ALLOW_LOADER_STRING_SPECIFICATION
-
-/* */
 #undef FIM_AUTHOR
-
-/* */
-#undef FIM_AUTHOR_EMAIL
-
-/* */
-#undef FIM_AUTHOR_NAME
 
 /* */
 #undef FIM_AUTOCMDS
@@ -58,16 +43,10 @@
 #undef FIM_COMMAND_AUTOCOMPLETION
 
 /* */
-#undef FIM_CONFIGURATION
-
-/* */
 #undef FIM_DEFAULT_CONFIG
 
 /* */
 #undef FIM_DEFAULT_CONFIGURATION
-
-/* */
-#undef FIM_DEFAULT_CONSOLEFONT
 
 /* */
 #undef FIM_DEFAULT_KEY_CONFIG
@@ -98,9 +77,6 @@
 
 /* */
 #undef FIM_NOFIMRC
-
-/* */
-#undef FIM_NOHISTORY
 
 /* */
 #undef FIM_PIPE_IMAGE_READ
@@ -169,42 +145,7 @@
 #undef FIM_WANTS_SLOW_RESIZE
 
 /* */
-#undef FIM_WANT_CUSTOM_INFO_STATUS_BAR
-
-/* If defined, exiftool will be used to get additional file information
-   (EXPERIMENTAL). */
-#undef FIM_WANT_EXIFTOOL
-
-/* Fim will be capable of marking files while viewing and outputting their
-   names on exit. */
-#undef FIM_WANT_FILENAME_MARK_AND_DUMP
-
-/* Enable a hardcoded font in the executable. */
-#undef FIM_WANT_HARDCODED_FONT
-
-/* Internals shall use 64 bit integers (EXPERIMENTAL). */
-#undef FIM_WANT_LONG_INT
-
-/* Scripting. (enabled by default) */
-#undef FIM_WANT_NOSCRIPTING
-
-/* Output console. (enabled by default) */
-#undef FIM_WANT_NO_OUTPUT_CONSOLE
-
-/* Enables raw bits rendering */
-#undef FIM_WANT_RAW_BITS_RENDERING
-
-/* */
 #undef FIM_WANT_SEEK_MAGIC
-
-/* */
-#undef FIM_WANT_STATIC_BINARY
-
-/* Enables text rendering */
-#undef FIM_WANT_TEXT_RENDERING
-
-/* Unicode. (disabled by default) */
-#undef FIM_WANT_UNICODE
 
 /* Fim windowing support */
 #undef FIM_WINDOWS
@@ -212,23 +153,8 @@
 /* */
 #undef FIM_WITH_AALIB
 
-/* Defined, if (EXPERIMENTAL, UNFINISHED) libarchive support is enabled */
-#undef FIM_WITH_ARCHIVE
-
-/* BMP file support. */
-#undef FIM_WITH_BMP
-
 /* */
 #undef FIM_WITH_CACALIB
-
-/* */
-#undef FIM_WITH_LIBEXIF
-
-/* We have libImlib */
-#undef FIM_WITH_LIBIMLIB2
-
-/* */
-#undef FIM_WITH_LIBJASPER
 
 /* Defined, if libpng support is enabled */
 #undef FIM_WITH_LIBPNG
@@ -236,17 +162,8 @@
 /* Defined, if libsdl support is enabled */
 #undef FIM_WITH_LIBSDL
 
-/* Defined if sample bogus 'xyz' loader support is enabled. */
-#undef FIM_WITH_LIBXYZ
-
 /* Defined when framebuffer device support is turned off. */
 #undef FIM_WITH_NO_FRAMEBUFFER
-
-/* PCX file support. */
-#undef FIM_WITH_PCX
-
-/* Defined, if UFRaw support is enabled */
-#undef FIM_WITH_UFRAW
 
 /* Define to 1 if you have the `bcmp' function. */
 #undef HAVE_BCMP
@@ -273,18 +190,6 @@
 /* If present, fgetln() will be used as a replacement for getline(). (on BSD)
    */
 #undef HAVE_FGETLN
-
-/* Define to 1 if you have the `fileno' function. */
-#undef HAVE_FILENO
-
-/* Define to 1 if you have the `fmemopen' function. */
-#undef HAVE_FMEMOPEN
-
-/* Define to 1 if you have the <fontconfig/fcfreetype.h> header file. */
-#undef HAVE_FONTCONFIG_FCFREETYPE_H
-
-/* Define to 1 if you have the <fontconfig/fontconfig.h> header file. */
-#undef HAVE_FONTCONFIG_FONTCONFIG_H
 
 /* Define to 1 if fseeko (and presumably ftello) exists and is declared. */
 #undef HAVE_FSEEKO
@@ -314,20 +219,14 @@
 /* Define to 1 if you have the `fl' library (-lfl). */
 #undef HAVE_LIBFL
 
-/* Define to 1 if you have the <libgen.h> header file. */
-#undef HAVE_LIBGEN_H
-
-/* We have libGraphicsMagick */
-#undef HAVE_LIBGRAPHICSMAGICK
-
 /* We have libjpeg */
 #undef HAVE_LIBJPEG
 
 /* Define to 1 if you have the `m' library (-lm). */
 #undef HAVE_LIBM
 
-/* We have libpoppler (Warning: the API could still break! (as of
-   v.0.8.7--0.24.1)) */
+/* We have libpoppler (Warning: the API could still break! (tested with
+   v.0.8.7)) */
 #undef HAVE_LIBPOPPLER
 
 /* We have libspectre */
@@ -344,9 +243,6 @@
 
 /* Define to 1 if you have the <linux/vt.h> header file. */
 #undef HAVE_LINUX_VT_H
-
-/* */
-#undef HAVE_MATRIX_MARKET_DECODER
 
 /* Define to 1 if you have the `memcmp' function. */
 #undef HAVE_MEMCMP
@@ -406,9 +302,6 @@
 /* Define to 1 if you have the <sys/ioctl.h> header file. */
 #undef HAVE_SYS_IOCTL_H
 
-/* Define to 1 if you have the <sys/mman.h> header file. */
-#undef HAVE_SYS_MMAN_H
-
 /* Define to 1 if you have the <sys/ndir.h> header file, and it defines `DIR'.
    */
 #undef HAVE_SYS_NDIR_H
@@ -428,17 +321,11 @@
 /* Define to 1 if you have the <sys/types.h> header file. */
 #undef HAVE_SYS_TYPES_H
 
-/* Define to 1 if you have the <sys/user.h> header file. */
-#undef HAVE_SYS_USER_H
-
 /* Define to 1 if you have the <unistd.h> header file. */
 #undef HAVE_UNISTD_H
 
 /* Define to 1 if you have the <unix.h> header file. */
 #undef HAVE_UNIX_H
-
-/* Define to 1 if you have the <wchar.h> header file. */
-#undef HAVE_WCHAR_H
 
 /* Name of package */
 #undef PACKAGE
@@ -461,6 +348,9 @@
 /* Define to the version of this package. */
 #undef PACKAGE_VERSION
 
+/* Define to 1 if the C compiler supports function prototypes. */
+#undef PROTOTYPES
+
 /* Define as the return type of signal handlers (`int' or `void'). */
 #undef RETSIGTYPE
 
@@ -473,17 +363,11 @@
 /* The size of `off_t', as computed by sizeof. */
 #undef SIZEOF_OFF_T
 
-/* The size of `size_t', as computed by sizeof. */
-#undef SIZEOF_SIZE_T
-
 /* Define to 1 if you have the ANSI C header files. */
 #undef STDC_HEADERS
 
 /* SVN REVISION */
 #undef SVN_REVISION
-
-/* SVN REVISION NUMBER */
-#undef SVN_REVISION_NUMBER
 
 /* Define if you want to use the included (GNU) regex.c. */
 #undef USE_GNU_REGEX
@@ -525,14 +409,12 @@
 # endif
 #endif
 
+/* */
+#undef X_DISPLAY_MISSING
+
 /* Define to 1 if `lex' declares `yytext' as a `char *' by default, not a
    `char[]'. */
 #undef YYTEXT_POINTER
-
-/* Enable large inode numbers on Mac OS X 10.5.  */
-#ifndef _DARWIN_USE_64_BIT_INODE
-# define _DARWIN_USE_64_BIT_INODE 1
-#endif
 
 /* Number of bits in a file offset, on hosts where this is settable. */
 #undef _FILE_OFFSET_BITS
@@ -552,6 +434,9 @@
 
 /* Define to 1 if you need to in order for `stat' and other things to work. */
 #undef _POSIX_SOURCE
+
+/* Define like PROTOTYPES; this can be used by system headers. */
+#undef __PROTOTYPES
 
 /* Define to empty if `const' does not conform to ANSI C. */
 #undef const

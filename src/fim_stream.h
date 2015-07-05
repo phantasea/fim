@@ -1,8 +1,8 @@
-/* $LastChangedDate: 2015-02-11 08:43:28 +0100 (Wed, 11 Feb 2015) $ */
+/* $Id: fim_stream.h 203 2009-01-10 11:13:17Z dezperado $ */
 /*
  fim_stream.h : Textual output facility
 
- (c) 2007-2013 Michele Martone
+ (c) 2007-2009 Michele Martone
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -28,29 +28,23 @@ namespace fim
 	 *
 	 * TODO: error and to file dump. maybe, some day.
 	 *	 move here the console handling functionalities.
-	 * TODO: introduce an enum for output selection
 	 * */
 
 	class fim_stream
 	{
-		fim_str_t fd_;
 		public:
-		fim_stream(fim_str_t fd=-1);
+		fim_stream(){}
 
-		fim_stream& operator<<(const  fim_char_t* s);
+		fim_stream& operator<<(const  char* s);
 
-		fim_stream& operator<<(const fim_byte_t* s);
+		fim_stream& operator<<(const unsigned char* s);
 
 		fim_stream& operator<<(const  fim::string&s);
 
 		fim_stream& operator<<(float f);
 
-#if FIM_WANT_LONG_INT
 		fim_stream& operator<<(int i);
-#endif /* FIM_WANT_LONG_INT */
-
-		fim_stream& operator<<(fim_int i);
 
 	};
 }
-#endif /* FIM_FIM_STREAM_H */
+#endif

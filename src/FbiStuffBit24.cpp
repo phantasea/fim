@@ -1,8 +1,8 @@
-/* $LastChangedDate: 2014-11-17 19:22:17 +0100 (Mon, 17 Nov 2014) $ */
+/* $Id: FbiStuffBit24.cpp 271 2009-12-13 00:03:48Z dezperado $ */
 /*
  FbiStuffBit24.cpp : fbi functions for reading ELF files as they were raw 24 bit per pixel pixelmaps
 
- (c) 2007-2014 Michele Martone
+ (c) 2007-2009 Michele Martone
  based on code (c) 1998-2006 Gerd Knorr <kraxel@bytesex.org>
 
     This program is free software; you can redistribute it and/or modify
@@ -26,7 +26,6 @@
 
 #include "fim.h"
 
-#if FIM_WANT_RAW_BITS_RENDERING
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -34,12 +33,11 @@
 #include <errno.h>
 #ifdef HAVE_ENDIAN_H
 # include <endian.h>
-#endif /* HAVE_ENDIAN_H */
+#endif
 
 namespace fim
 {
 
-extern CommandConsole cc;
 
 /* ---------------------------------------------------------------------- */
 
@@ -57,24 +55,18 @@ struct bit24_state {
 };
 
 static void*
-bit24_init(FILE *fp, const fim_char_t *filename, unsigned int page,
+bit24_init(FILE *fp, char *filename, unsigned int page,
 	 struct ida_image_info *i, int thumbnail)
 {
-    struct bit24_state *h=NULL;
-    long ftellr;
-    fim_int prw=cc.getIntVariable(FIM_VID_PREFERRED_RENDERING_WIDTH);
-    prw=prw<1?FIM_BITRENDERING_DEF_WIDTH:prw;
+    struct bit24_state *h;
     
-    h = (struct bit24_state *)fim_calloc(1,sizeof(*h));
-    if(!h)
-	    goto oops;
+    h = (struct bit24_state *)fim_calloc(sizeof(*h),1);
+    if(!h)goto oops;
+    memset(h,0,sizeof(*h));
     h->fp = fp;
-    if(fseek(fp,0,SEEK_END)!=0)
-	    goto oops;
-    ftellr=ftell(fp);
-    if((ftellr)==-1)
-	    goto oops;
-    i->width  = h->w = prw;
+    if(fseek(fp,0,SEEK_END)!=0) goto oops;
+    if((h->flen=ftell(fp))==-1)goto oops;
+    i->width  = h->w = 1024;
     i->height = h->h = (h->flen+(h->w*3-1)) / ( h->w*3 ); // should pad
     return h;
  oops:
@@ -83,10 +75,10 @@ bit24_init(FILE *fp, const fim_char_t *filename, unsigned int page,
 }
 
 static void
-bit24_read(fim_byte_t *dst, unsigned int line, void *data)
+bit24_read(unsigned char *dst, unsigned int line, void *data)
 {
     struct bit24_state *h = (struct bit24_state *) data;
-    unsigned int ll,y,x = 0;
+    unsigned int ll,y,x,pixel,byte = 0;
     
 	y  = line ;
 	if(y==h->h-1)
@@ -104,7 +96,7 @@ bit24_read(fim_byte_t *dst, unsigned int line, void *data)
 		*(dst++) = fgetc(h->fp);
 		*(dst++) = fgetc(h->fp);
 	}
-//	if(y==h->h-1) fim_bzero(dst,h->w*3-3*x);
+//	if(y==h->h-1) bzero(dst,h->w*3-3*x);
 }
 
 static void
@@ -123,7 +115,7 @@ struct ida_loader bit24_loader = {
     /*magic:*/ "ELF",
     /*moff:*/  1,
     /*mlen:*/  3,
-    /*name:*/  "Bit24",
+    /*name:*/  "bmp",
     /*init:*/  bit24_init,
     /*read:*/  bit24_read,
     /*done:*/  bit24_done,
@@ -131,9 +123,9 @@ struct ida_loader bit24_loader = {
 
 static void __init init_rd(void)
 {
-    fim_load_register(&bit24_loader);
+    load_register(&bit24_loader);
 }
 
 
 }
-#endif /* FIM_WANT_RAW_BITS_RENDERING */
+

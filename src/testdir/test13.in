@@ -1,7 +1,5 @@
 # file browsing test
 # in order for this test to terminate, we need some files ..
-if(_filelistlen>1){stdout "at least one file in the list.";quit 1;}
-if(_filelistlen<1){stdout "probable problems with file browser.";quit 1;}
-while(_filelistlen>1){list "pop";}
-stdout _filelistlen;
+if(filelistlen<1){stdout "probable problems with file browser.";return 1;}
+while(filelistlen>0){pop;}
 stdout "browser test ok.";

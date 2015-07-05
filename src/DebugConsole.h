@@ -1,8 +1,8 @@
-/* $LastChangedDate: 2014-08-30 10:31:56 +0200 (Sat, 30 Aug 2014) $ */
+/* $Id: DebugConsole.h 268 2009-12-08 23:05:55Z dezperado $ */
 /*
  DebugConsole.h : Fim virtual console display.
 
- (c) 2008-2014 Michele Martone
+ (c) 2008-2009 Michele Martone
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -27,7 +27,6 @@
 #include "Var.h"
 #include "Namespace.h"
 
-#ifndef FIM_WANT_NO_OUTPUT_CONSOLE
 namespace fim
 {
 	class FimConsole
@@ -40,67 +39,63 @@ namespace fim
 	class MiniConsole
 #ifdef FIM_NAMESPACES
 	:public Namespace
-#endif /* FIM_NAMESPACES */
+#endif
 	{
-		fim_char_t *buffer_;	// the raw console buffer
-		fim_char_t **line_;	// the (displayed) line_ pointers array
+		char *buffer;	// the raw console buffer
+		char **line;	// the (displayed) line pointers array
 
-		fim_char_t *bp_;	// pointer to the top of the buffer
+		char *bp;	// pointer to the top of the buffer
 
-		int  bsize_;	// the buffer size
-		int  lsize_;	// the lines array size
+		int  bsize;	// the buffer size
+		int  lsize;	// the lines array size
 
-		int  ccol_;	// the currently pointed column
-		int  cline_;	// the line_ on the top of the buffer
+		int  ccol;	// the currently pointed column
+		int  cline;	// the line on the top of the buffer
 		
-		int  lwidth_;
-		int  rows_;
-		int  scroll_;
+		int  lwidth;
+		int  rows;
+		int  scroll;
 
 		public:
-		CommandConsole & cc_;	// temporarily
+		CommandConsole & cc;	// temporarily
 
-		MiniConsole(CommandConsole & cc,int lw=48, int r=12); /* FIXME: shall get rid of numerical constants! */
-		virtual ~MiniConsole(void){}
-		fim_err_t dump(void);	// non const due to user variables reaction
-		fim_err_t grow(void);
-		fim_err_t setRows(int nr);
-		fim_err_t add(const fim_char_t * cso);
-		fim_err_t add(const fim_byte_t* cso);
-		fim_err_t reformat(int newlsize);
-		fim_err_t do_dump(int amount)const;
-		fim_err_t clear(void);
-		fim_err_t scroll_down(void);
-		fim_err_t scroll_up(void);
-		virtual size_t byte_size(void)const;
+		MiniConsole(CommandConsole & cc_,int lw=48, int r=12);
+		virtual ~MiniConsole(){}
+		int dump();	// non const due to user variables reaction
+		int grow();
+		int setRows(int nr);
+		int add(const char* cso);
+		int reformat(int newlsize);
+		int do_dump(int amount)const;
+		int clear();
+		int scroll_down();
+		int scroll_up();
 
 		private:
-		MiniConsole& operator= (const MiniConsole&mc);
+		MiniConsole& operator= (const MiniConsole&mc){return *this;/* a nilpotent assignation */}
 		MiniConsole(const MiniConsole &mc) :
-			Namespace(mc),
-			buffer_(NULL),
-			line_(NULL),
-			bp_(NULL),
-			bsize_(0),
-			lsize_(0),
-			ccol_(0),
-			cline_(0),
-			lwidth_(0),
-			rows_(0),
-			scroll_(0),
-			cc_(mc.cc_)
+			buffer(NULL),
+			line(NULL),
+			bp(NULL),
+			bsize(0),
+			lsize(0),
+			ccol(0),
+			cline(0),
+			lwidth(0),
+			rows(0),
+			scroll(0),
+			cc(mc.cc)
 			{/* this constructor should not be used */}
 
 		int line_length(int li);
-		fim_err_t do_dump(int f, int l)const;
-		fim_err_t do_dump(void)const;
+		int do_dump(int f, int l)const;
+		int do_dump()const;
 
-		fim_err_t grow_lines(int glines);
-		fim_err_t grow_buffer(int gbuffer);
-		fim_err_t grow(int glines, int gbuffer);
+		int grow_lines(int glines);
+		int grow_buffer(int gbuffer);
+		int grow(int glines, int gbuffer);
 	};
 }
-#endif /* FIM_WANT_NO_OUTPUT_CONSOLE */
 
-#endif /* FIM_CONSOLE_H */
+#endif
 

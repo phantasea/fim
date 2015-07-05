@@ -1,8 +1,8 @@
-/* $LastChangedDate: 2015-02-12 18:27:46 +0100 (Thu, 12 Feb 2015) $ */
+/* $Id: Namespace.h 229 2009-03-28 15:31:59Z dezperado $ */
 /*
  Namespace.h : Namespace class headers
 
- (c) 2007-2015 Michele Martone
+ (c) 2007-2009 Michele Martone
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -26,60 +26,45 @@
 
 namespace fim
 {
+	extern CommandConsole cc;
 	typedef std::map<const fim::string,Var> variables_t;	//id->var
 	class Namespace
 	{
-		protected:
-#ifndef FIM_INDIPENDENT_NAMESPACE
-		CommandConsole*rnsp_; // root Namespace pointer
-#endif /* FIM_INDIPENDENT_NAMESPACE */
-		variables_t variables_;	//id->var
-		fim_char_t ns_char_; // ns_char_ ':' varname
+		/*
+		 * FIXME: experimental
+		 *
+		 * note that right here inside there is no check on the id token correctness 
+		 * respect to the Fim language grammar syntax.
+		 *
+		 * the identifier->variable binding
+		 */
+		variables_t variables;	//id->var
 	
 		public:
 
-		fim_int setVariable(const fim::string& varname,fim_int value);
-		fim_float_t setVariable(const fim::string& varname,fim_float_t value);
-		fim_int setVariable(const fim::string& varname,const fim_char_t*value);
-		Var setVariable(const fim::string& varname,const Var&value);
+		int setVariable(const fim::string& varname,int value);
+		float setVariable(const fim::string& varname,float value);
+		int setVariable(const fim::string& varname,const char*value);
+		Var setVariable(const fim::string& varname,const Var&value);//NEW
 
-		fim_int getIntVariable(const fim::string &varname)const;
-		fim_float_t getFloatVariable(const fim::string &varname)const;
+		int getIntVariable(const fim::string &varname)const;
+		float getFloatVariable(const fim::string &varname)const;
 		fim::string getStringVariable(const fim::string &varname)const;
 		Var getVariable(const fim::string &varname)const;
 
-		fim_bool_t isSetVar(const fim::string &varname)const;
+		int  setGlobalVariable(const fim::string& varname,int value);
+	        float setGlobalVariable(const fim::string& varname,float value);
+		int setGlobalVariable(const fim::string& varname,const char*value);
 
-		fim_int  setGlobalVariable(const fim::string& varname,fim_int value);
-	        fim_float_t setGlobalVariable(const fim::string& varname,fim_float_t value);
-		fim_int setGlobalVariable(const fim::string& varname,const fim_char_t*value);
-
-		fim_int getGlobalIntVariable(const fim::string &varname)const;
-		fim_float_t getGlobalFloatVariable(const fim::string &varname)const;
-		fim::string getGlobalStringVariable(const fim::string &varname)const;
+		int getGlobalIntVariable(const fim::string &varname)const;
+		float getGlobalFloatVariable(const fim::string &varname);
+		fim::string getGlobalStringVariable(const fim::string &varname);
 		fim::string autocmd_exec(const fim::string &event,const fim::string &fname);
-		fim::string get_variables_list(bool with_values=false)const;
-		virtual size_t byte_size(void)const = 0;
 
-		Namespace(
-#ifndef FIM_INDIPENDENT_NAMESPACE
-				CommandConsole *rnsp = NULL,
-#endif /* FIM_INDIPENDENT_NAMESPACE */
-			       	const fim_char_t ns_char = FIM_SYM_NULL_NAMESPACE_CHAR
-			)
-			:
-#ifndef FIM_INDIPENDENT_NAMESPACE
-		      rnsp_(rnsp),
-#endif /* FIM_INDIPENDENT_NAMESPACE */
-			variables_(variables_t())
-			,ns_char_(ns_char)
-	       	{}
-		virtual ~Namespace(void){}
-		fim_err_t find_matching_list(fim::string cmd, args_t & completions, bool prepend_ns)const;
-		std::ostream& print(std::ostream &os)const;
+		Namespace():variables(variables_t()) {}
+		virtual ~Namespace(){}
 	};
-		std::ostream& operator<<(std::ostream &os, const Namespace & ns);
 }
 
-#endif /* FIM_NAMESPACE_H */
+#endif
 

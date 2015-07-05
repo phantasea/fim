@@ -1,8 +1,8 @@
-/* $LastChangedDate: 2013-07-04 23:07:07 +0200 (Thu, 04 Jul 2013) $ */
+/* $Id: FbiStuffList.h 245 2009-04-28 21:28:38Z dezperado $ */
 /*
  FbiStuffList.h : fbi functions for lists, modified for fim
 
- (c) 2008-2013 Michele Martone
+ (c) 2008-2009 Michele Martone
  (c) 1998-2006 Gerd Knorr <kraxel@bytesex.org>
 
     This program is free software; you can redistribute it and/or modify
@@ -26,7 +26,7 @@
 #ifndef FBI_STUFF_LIST_H
 #define FBI_STUFF_LIST_H
 
-#include "fim_types.h"
+#include "fim.h"
 
 //from list.h
 /*
@@ -47,11 +47,11 @@ struct list_head {
 /* beware that LIST_HEAD is defined in freebsd's <sys/queue.h> */
 #ifdef FIM_LIST_HEAD_INIT
 #undef FIM_LIST_HEAD_INIT
-#endif /* FIM_LIST_HEAD_INIT */
+#endif
 
 #ifdef FIM_LIST_HEAD
 #undef FIM_LIST_HEAD
-#endif /* FIM_LIST_HEAD */
+#endif
 
 #define FIM_LIST_HEAD_INIT(name) { &(name), &(name) }
 
@@ -175,7 +175,7 @@ static __inline__ void list_splice(struct list_head *list, struct list_head *hea
  * @member:	the name of the list_struct within the struct.
  */
 #define list_entry(ptr, type, member) \
-	((type *)((fim_char_t *)(ptr)-(unsigned long)(&((type *)0)->member)))
+	((type *)((char *)(ptr)-(unsigned long)(&((type *)0)->member)))
 
 /**
  * list_for_each	-	iterate over a list
@@ -206,5 +206,5 @@ static __inline__ void list_splice(struct list_head *list, struct list_head *hea
 
 //end from list.h 
 
-#endif /* FBI_STUFF_LIST_H */
+#endif
 

@@ -1,8 +1,8 @@
-/* $LastChangedDate: 2013-07-04 21:56:00 +0200 (Thu, 04 Jul 2013) $ */
+/* $Id: FbiStuffFbtools.cpp 245 2009-04-28 21:28:38Z dezperado $ */
 /*
  FbiStuffFbtools.cpp : fbi functions from fbtools.c, modified for fim
 
- (c) 2008-2013 Michele Martone
+ (c) 2008-2009 Michele Martone
  (c) 1998-2006 Gerd Knorr <kraxel@bytesex.org>
 
     This program is free software; you can redistribute it and/or modify
@@ -30,9 +30,7 @@
 #include <termios.h>
 #include <signal.h>	// sigaction, ...
 #include <setjmp.h>
-#ifdef HAVE_SYS_USER_H
 #include <sys/user.h>	  /* this should be a safer replacement */
-#endif /* HAVE_SYS_USER_H */
 
 #include "FbiStuffFbtools.h"
 #include "FramebufferDevice.h"
@@ -60,7 +58,7 @@ void fb_catch_exit_signals(void)
     struct sigaction act,old;
     int termsig;
 
-    fim_bzero(&act,sizeof(act));
+    memset(&act,0,sizeof(act));
     act.sa_handler = fb_catch_exit_signal;
     sigemptyset(&act.sa_mask);
     sigaction(SIGINT, &act,&old);
@@ -81,8 +79,8 @@ void fb_catch_exit_signals(void)
     cc.cleanup();
 #ifdef HAVE_SYS_SIGLIST
     FIM_FBI_PRINTF("Oops: %s\n",sys_siglist[termsig]);
-#endif /* HAVE_SYS_SIGLIST */
-    std::exit(FIM_PERR_OOPS);
+#endif
+    std::exit(42);
 }
 
 

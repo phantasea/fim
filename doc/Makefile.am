@@ -1,40 +1,37 @@
-# $LastChangedDate: 2014-08-29 22:50:31 +0200 (Fri, 29 Aug 2014) $
 
-HTMLDOCS=FIM.html fim.man.html  fimgs.man.html fimrc.man.html
+# $Id: Makefile.am 245 2009-04-28 21:28:38Z dezperado $
 
-CLEANFILES= doctags *.o  tags $(HTMLDOCS)
+CLEANFILES= doctags *.o  tags
 
-EXTRA_DIST = FIM.TXT fim.man doctags.c fim-stylesheet.css ./vim2html.pl fimgs.man fimrc.man
-#MAN2HTML=man2html
-MAN2HTML=$(MAN) --html=cat
+HTMLDOCS=FIM.html fim.man.html  fimgs.man.html
+EXTRA_DIST = FIM.TXT fim.man doctags.c fim-stylesheet.css ./vim2html.pl fimgs.man
 
 man1_MANS = fim.man fimgs.man
-man5_MANS = fimrc.man
 
 # html stuff is installed in the documentation directories, too
 htmldir = $(docdir)
 dist_html_DATA = $(HTMLDOCS)
 dist_doc_DATA = FIM.TXT
 
-all:	$(HTMLDOCS) $(EXTRA_DIST)
+all:	$(EXTRA_DIST)
+
+htmldocs:        $(HTMLDOCS)
+#docs:        $(HTMLDOCS)
 
 FIM.html fim-stylesheet.css: doctags FIM.TXT
-	./doctags $(srcdir)/FIM.TXT > tags ; $(srcdir)/vim2html.pl tags $(srcdir)/FIM.TXT
+	./doctags FIM.TXT > tags ; ./vim2html.pl tags FIM.TXT
 
 fim.man.html: fim.man
-	$(MAN2HTML) ./$< >  $@ || $(ECHO) "$(ERRMSG) $(MAN2HTML) $< >  $@"
+	man2html fim.man >  fim.man.html || echo "$(ERRMSG) man2html fim.man >  fim.man.html"
 
-fimrc.man.html: fimrc.man
-	$(MAN2HTML) ./$< >  $@ || $(ECHO) "$(ERRMSG) $(MAN2HTML) $< >  $@"
-
-ERRMSG="No $(MAN2HTML) at build time : please install $(MAN2HTML) and reissue :"
+ERRMSG="no man2html at build time : please install man2html and reissue :"
 
 fimgs.man.html: fimgs.man
-	$(MAN2HTML) ./$< >  $@ || $(ECHO) "$(ERRMSG) $(MAN2HTML) $< >  $@"
+	man2html fimgs.man >  fimgs.man.html || echo "$(ERRMSG) man2html fimgs.man >  fimgs.man.html"
 
-doctags: doctags.c
-	        $(CC) -o $@ $<
+doctags:
+	        $(CC) -o doctags doctags.c
 
 #clean:
-#	        $(RM) -f  doctags.o doctags FIM.html tags fim-stylesheet.css fim.man.html fimgs.man.html
+#	        rm -f  doctags.o doctags FIM.html tags fim-stylesheet.css fim.man.html fimgs.man.html
 

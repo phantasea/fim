@@ -1,8 +1,8 @@
-/* $LastChangedDate: 2015-02-11 17:51:25 +0100 (Wed, 11 Feb 2015) $ */
+/* $Id: Arg.h 203 2009-01-10 11:13:17Z dezperado $ */
 /*
  Arg.h : Argument class
 
- (c) 2007-2015 Michele Martone
+ (c) 2007-2009 Michele Martone
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -26,16 +26,16 @@ namespace fim
 class Arg
 {
 	public:
-	fim::string val_;
-	Arg(const fim::string &s):val_(s){}
-	Arg(const Arg &arg):val_(arg.val_){}
-	bool operator==(fim_int i);
-	bool operator<=(fim_int i);
-	bool operator>=(fim_int i);
-	bool operator <(fim_int i);
-	bool operator >(fim_int i);
+	fim::string val;
+	Arg(const fim::string &s):val(s){}
+	Arg(const Arg &arg):val(arg.val){}
+	bool operator==(int i){int v=atoi(val.c_str());return v==i;}
+	bool operator<=(int i){int v=atoi(val.c_str());return v<=i;}
+	bool operator>=(int i){int v=atoi(val.c_str());return v>=i;}
+	bool operator <(int i){int v=atoi(val.c_str());return v <i;}
+	bool operator >(int i){int v=atoi(val.c_str());return v >i;}
 };
 
 
 }
-#endif /* FIM_ARG_H */
+#endif

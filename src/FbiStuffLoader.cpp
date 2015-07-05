@@ -1,8 +1,8 @@
-/* $LastChangedDate: 2013-10-30 18:17:32 +0100 (Wed, 30 Oct 2013) $ */
+/* $Id: FbiStuffLoader.cpp 269 2009-12-08 23:45:10Z dezperado $ */
 /*
  FbiStuffLoader.cpp : fbi functions for loading files, modified for fim
 
- (c) 2008-2013 Michele Martone
+ (c) 2008-2009 Michele Martone
  (c) 1998-2006 Gerd Knorr <kraxel@bytesex.org>
 
     This program is free software; you can redistribute it and/or modify
@@ -30,7 +30,6 @@
 #include <string.h>
 
 //#include "loader.h"
-#include "fim.h"
 #include "FbiStuffLoader.h"
 
 /* ----------------------------------------------------------------------- */
@@ -38,7 +37,7 @@
 namespace fim
 {
 
-void load_bits_lsb(fim_byte_t *dst, fim_byte_t *src, int width,
+void load_bits_lsb(unsigned char *dst, unsigned char *src, int width,
 		   int on, int off)
 {
     int i,mask,bit;
@@ -53,7 +52,7 @@ void load_bits_lsb(fim_byte_t *dst, fim_byte_t *src, int width,
     }
 }
 
-void load_bits_msb(fim_byte_t *dst, fim_byte_t *src, int width,
+void load_bits_msb(unsigned char *dst, unsigned char *src, int width,
 		   int on, int off)
 {
     int i,mask,bit;
@@ -68,7 +67,7 @@ void load_bits_msb(fim_byte_t *dst, fim_byte_t *src, int width,
     }
 }
 
-void load_gray(fim_byte_t *dst, fim_byte_t *src, int width)
+void load_gray(unsigned char *dst, unsigned char *src, int width)
 {
     int i;
 
@@ -81,7 +80,7 @@ void load_gray(fim_byte_t *dst, fim_byte_t *src, int width)
     }
 }
 
-void load_graya(fim_byte_t *dst, fim_byte_t *src, int width)
+void load_graya(unsigned char *dst, unsigned char *src, int width)
 {
     int i;
 
@@ -94,7 +93,7 @@ void load_graya(fim_byte_t *dst, fim_byte_t *src, int width)
     }
 }
 
-void load_rgba(fim_byte_t *dst, fim_byte_t *src, int width)
+void load_rgba(unsigned char *dst, unsigned char *src, int width)
 {
     int i;
 
@@ -110,16 +109,15 @@ void load_rgba(fim_byte_t *dst, fim_byte_t *src, int width)
 /* ----------------------------------------------------------------------- */
 
 int load_add_extra(struct ida_image_info *info, enum ida_extype type,
-		   fim_byte_t *data, unsigned int size)
+		   unsigned char *data, unsigned int size)
 {
     struct ida_extra *extra;
 
     extra = (struct ida_extra*)malloc(sizeof(*extra));
     if (NULL == extra)
 	return -1;
-    if(type==EXTRA_COMMENT) ++size;// dez's
-    fim_bzero(extra,sizeof(*extra));
-    extra->data = (fim_byte_t*)malloc(size);
+    memset(extra,0,sizeof(*extra));
+    extra->data = (unsigned char*)malloc(size);
     if (NULL == extra->data) {
 	fim_free(extra);
 	return -1;
@@ -127,7 +125,6 @@ int load_add_extra(struct ida_image_info *info, enum ida_extype type,
     extra->type = type;
     extra->size = size;
     memcpy(extra->data,data,size);
-    if(type==EXTRA_COMMENT) extra->data[size-1]='\0';// dez's
     extra->next = info->extra;
     info->extra = extra;
     return 0;
@@ -162,36 +159,17 @@ int load_free_extras(struct ida_image_info *info)
 FIM_LIST_HEAD(loaders);
 FIM_LIST_HEAD(writers);
 
-void fim_load_register(struct ida_loader *loader)
+void load_register(struct ida_loader *loader)
 {
     list_add_tail(&loader->list, &loaders);
 }
 
 #ifdef USE_X11
-void fim_write_register(struct ida_writer *writer)
+void write_register(struct ida_writer *writer)
 {
     list_add_tail(&writer->list, &writers);
 }
-#endif /* USE_X11 */
+#endif
 
-	void fim_loaders_to_stderr(void)
-    	{
-		/* FIXME: new, should be generalized */
-    		struct list_head *item=NULL;
-    		struct ida_loader *loader = NULL;
-    		FIM_FPRINTF(stderr,"%s","\nSupported file loaders: ");
-    		list_for_each(item,&loaders)
-		{
-        		loader = list_entry(item, struct ida_loader, list);
-			if(loader->name && loader->mlen>=1)
-				FIM_FPRINTF(stderr," %s",loader->name); 
-    		}
-    		list_for_each(item,&loaders)
-		{
-        		loader = list_entry(item, struct ida_loader, list);
-			if(loader->name && loader->mlen<=0)
-				FIM_FPRINTF(stderr," %s",loader->name); 
-    		}
-    		FIM_FPRINTF(stderr,"%s","\n");
-	}
 }
+

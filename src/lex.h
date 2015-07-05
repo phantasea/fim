@@ -1,8 +1,8 @@
-/* $LastChangedDate: 2015-02-11 17:51:25 +0100 (Wed, 11 Feb 2015) $ */
+/* $Id: lex.h 230 2009-03-29 13:48:32Z dezperado $ */
 /*
  lex.h : Lexer (lex) header file
 
- (c) 2007-2013 Michele Martone
+ (c) 2007-2009 Michele Martone
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -20,16 +20,15 @@
 */
 #ifndef FIM_LEX_H
 #define FIM_LEX_H
-#include "fim_types.h"
 
 typedef enum { intCon, floatCon, typeOpr, stringCon,cmdId/*cmdId is dead */,vId } nodeEnum;
 /* constants */
 typedef struct {
-fim_int value; /* value of constant */
+int value; /* value of constant */
 } conNodeType;
 /* identifiers */
 typedef struct {
-fim_char_t *s; /* subscript to sym array */
+char *s; /* subscript to sym array */
 } stringNodeType;
 typedef struct {
 float f; /* subscript to sym array */
@@ -59,5 +58,5 @@ oprNodeType opr; /* operators */
 } nodeType;
 extern int sym[26];
 
-#endif /* FIM_LEX_H */
+#endif
 

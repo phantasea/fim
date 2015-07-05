@@ -1,7 +1,7 @@
 #!/bin/bash
-# $Id: fimgs 569 2013-10-12 16:54:47Z dezperado $
+# $Id: fimgs 268 2009-12-08 23:05:55Z dezperado $
 
-# (c) 2007-2013 Michele Martone
+# (c) 2007 Michele Martone
 
 # This is a modified version of the original fbgs script,by Gerd Knorr
 # and is capable of displaying pdf, eps, ps, and dvi files.
@@ -14,15 +14,8 @@
 
 # 20070925	regular expressions failed on some configurations, so were 'cut'.. :-(
 # 20090917	TODO: should work with no rar or no unzip
-# 20091214	TODO: and options to wget ?
-# 20090525	should use -o option to rename files to a known filename before loading them, in the temporary directory.
 
 DIR="${TMPDIR-/var/tmp}/fbps-$$"
-#GSRESOLUTION=""
-#GSRESOLUTION=${GSRESOLUTION:--r240x240}
-GSRESOLUTION=${GSRESOLUTION:-120x120}
-shopt  -s nocasematch
-
 
 # we must have write permissions in that directory
 mkdir -p $DIR	|| exit 1
@@ -105,68 +98,22 @@ do
 #			shift; shift
 #			;;
 		# explicit option passing
-#		-t)	fbiopts="$fbiopts --no-framebuffer"
-#			shift
-#			;;
-		-r)	GSRESOLUTION="$2";
-			shift ; shift
+		-t)	fbiopts="$fbiopts --no-framebuffer"
+			shift
 			;;
-#		-c)	fbiopts="$fbiopts --execute-commands $2"
-#			shift; shift
-#			;;
-#		-F)	fbiopts="$fbiopts --final-commands $2"
-#			shift; shift
-#			;;
-		-p)	GSPASSWORD="$2"
+		-c)	fbiopts="$fbiopts --execute-commands $2"
 			shift; shift
 			;;
-		-m)	shift
-cat << EOF
-.TH fimgs 1 "(c) 2007-2011 Michele Martone"
-.SH NAME
-fimgs - poor man's [http://]PostScript/pdf/dvi/cbr/rar/cbz/zip viewer for the linux
-framebuffer console
-.SH SYNOPSIS
-.B fimgs [ {fimgs-options} ] file [-- [{fim-options}]]
-.SH DESCRIPTION
-.B fimgs  
-is a simple wrapper script which takes a PostScript or pdf or .cbr or .rar or .cbz or .zip or .dvi or any of the above prefixed with http:// or https:// or ssh:// as input, renders the pages using ghostscript into a temporary directory and finally calls \fB $FBI\fP to display them.
-
-In case of compressed archives (in zip or rar formats), the images are decompressed into a directory and displayed using \fB fim\fP.
-In this latter case, only images contained in the archive will be displayed (no nested archives or pdf's or ps's or dvi's).
-
-The temporary directory name is taken from the \$TMPDIR environment variable. 
-
-.SH OPTIONS
-To pass through options to \fB fim\fP, you may specify them after "--".
-
-.B -r {resolution}
-Specify resolution for the 'gs' -r option (e.g.: 96x96; default $GSRESOLUTION). 
-.TP
-
-.B -m
-Dump a man page for fimgs.
-.TP
-
-.B -p {password}
-Specify password for the 'gs' -p (password) option.
-.TP
-
-.B -h
-Will display a help message.
-.\" Additionally you can specify -l, -xl or -xxl to get the pages
-.\" rendered with 100, 120 or 150 dpi (default is 75).
-.SH SEE ALSO
-fim(1), fimrc(1), gs(1), fbi(1), fbgs(1), bash(1)
-.SH AUTHOR
-Michele Martone <dezperado _ GUESS _ autistici.org>. 
-EOF
-			exit;
+		-F)	fbiopts="$fbiopts --final-commands $2"
+			shift; shift
+			;;
+		-p)	password="$2"
+			shift; shift
 			;;
 		-h)	
 			#help text
-			echo "$0 [{fimgs-options}] {files} [-- [fim-options]] "
-			echo -e "\nNote that any file in {files} may be a (correctly named) :"
+			echo "$0 [ -p PDF-PASSWORD] [ -h ] [ -c PRE-COMMANDS ] [ -F FINAL-COMMANDS ] FILES"
+			echo -e "\nNote that FILE can be a (correctly named) :"
 			echo -e " PDF (.pdf) file"
 			echo -e " Postscript (.ps) file"
 			echo -e " TAR (.tar) archive"
@@ -174,7 +121,7 @@ EOF
 			echo -e " GZIP (.gz) archive"
 			echo -e " https://  resource (web resource)"
 			echo -e " http://  resource (web resource)"
-			echo -e "\nNote that you cannot view files named like options (no -- meta-option apply to fimgs)."
+			echo -e "\nNote that you cannot view files names like the options (no -- meta-option)."
 			echo -e "\n \`man fimgs\`   will give you more info."
 			exit 1
 			;;
@@ -190,7 +137,6 @@ EOF
 #	shift
 done
 ###############################################################################
-###############################################################################
 ##		HANDLING OF CBR AND CBZ ARCHIVES
 ###############################################################################
 UNCBZ="unzip" ; ZOPT="-x '*/*'" # suits for Info-ZIP implementation
@@ -200,11 +146,10 @@ UNTGZ="tar xzf"
 UNBZ="tar xjf"
 #while [[ "$1" != "" ]]
 #while [[ "$#" -gt "0" ]]
-while test x"$opt" = x"1"
+while test "$opt" = "1"
 #while shift
 do
 	f="$1";
-	if test x"$f" == x"--" ; then shift; while test "$#" -gt "0" ; do f="$1"; fbiopts="$fbiopts $1" ; shift; done; f=/dev/null  ; fi 
 	shift;
 	[[ "$f" =~ 'https://' ]] && { fn="$DIR"/"`basename $f`" && wget "$f" -O "$fn" && trap "rm $fn" EXIT ; f="$fn"; }
 	[[ "$f" =~ 'http://' ]] && { fn="$DIR"/"`basename $f`" && wget "$f" -O "$fn" && trap "rm $fn" EXIT ; f="$fn"; }
@@ -246,8 +191,8 @@ info "rendering $f to $BDIR.."
 
 # note : we cannot render gs renderable documents with more than 1000 pages...
 gs	-dSAFER -dNOPAUSE -dBATCH			\
-	-sPDFPassword="$GSPASSWORD"			\
-	-sDEVICE=png256 -r${GSRESOLUTION} -sOutputFile=$BDIR/ps%03d.png	\
+	-sPDFPassword="$password"			\
+	-sDEVICE=png256 -r240x240 -sOutputFile=$BDIR/ps%03d.png	\
 	$gsopts						\
 	"$f" || die "ghostscript failed rendering!"
 # still unused options :
@@ -277,10 +222,10 @@ then
 
 # 20070925 there were problems with '\\.' so i put '.' only :/
 [[ "$f" =~ .cbr$    ]] && ( $UNCBR "$f"    "$DIR"  ) 
-#[[ "$f" =~ .CBR$    ]] && ( $UNCBR "$f"    "$DIR"  ) 
+[[ "$f" =~ .CBR$    ]] && ( $UNCBR "$f"    "$DIR"  ) 
 [[ "$f" =~ .rar$    ]] && ( $UNCBR "$f"    "$DIR"  ) 
 [[ "$f" =~ .cbz$    ]] && ( $UNCBZ "$f" $ZOPT -d "$DIR" ) 
-#[[ "$f" =~ .CBZ$    ]] && ( $UNCBZ "$f" $ZOPT -d "$DIR" ) 
+[[ "$f" =~ .CBZ$    ]] && ( $UNCBZ "$f" $ZOPT -d "$DIR" ) 
 [[ "$f" =~ .zip$    ]] && ( $UNCBZ "$f" $ZOPT -d "$DIR" ) 
 [[ "$f" =~ .tgz$    ]] && ( $UNTGZ "$f" -C "$DIR" ) 
 [[ "$f" =~ .tar.gz$ ]] && ( $UNTGZ "$f" -C "$DIR" ) 

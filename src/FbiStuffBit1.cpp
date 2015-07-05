@@ -1,8 +1,8 @@
-/* $LastChangedDate: 2014-11-17 19:22:17 +0100 (Mon, 17 Nov 2014) $ */
+/* $Id: FbiStuffBit1.cpp 271 2009-12-13 00:03:48Z dezperado $ */
 /*
  FbiStuffBit1.cpp : fbi functions for reading ELF files as they were raw 1 bit per pixel pixelmaps
 
- (c) 2007-2014 Michele Martone
+ (c) 2007-2009 Michele Martone
  based on code (c) 1998-2006 Gerd Knorr <kraxel@bytesex.org>
 
     This program is free software; you can redistribute it and/or modify
@@ -26,7 +26,6 @@
 
 #include "fim.h"
 
-#if FIM_WANT_RAW_BITS_RENDERING
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -34,12 +33,11 @@
 #include <errno.h>
 #ifdef HAVE_ENDIAN_H
 # include <endian.h>
-#endif /* HAVE_ENDIAN_H */
+#endif
 
 namespace fim
 {
 
-extern CommandConsole cc;
 
 /* ---------------------------------------------------------------------- */
 
@@ -57,19 +55,18 @@ struct bit1_state {
 };
 
 static void*
-bit1_init(FILE *fp, const fim_char_t *filename, unsigned int page,
+bit1_init(FILE *fp, char *filename, unsigned int page,
 	 struct ida_image_info *i, int thumbnail)
 {
-    struct bit1_state *h=NULL;
-    fim_int prw=cc.getIntVariable(FIM_VID_PREFERRED_RENDERING_WIDTH);
-    prw=prw<1?FIM_BITRENDERING_DEF_WIDTH:prw;
-
-    h = (struct bit1_state *)fim_calloc(1,sizeof(*h));
+    struct bit1_state *h;
+    
+    h = (struct bit1_state *)fim_calloc(sizeof(*h),1);
     if(!h)goto oops;
+    memset(h,0,sizeof(*h));
     h->fp = fp;
     if(fseek(fp,0,SEEK_END)!=0) goto oops;
     if((h->flen=ftell(fp))==-1)goto oops;
-    i->width  = h->w = prw;	// must be congruent to 8
+    i->width  = h->w = 1024;	// must be congruent to 8
     i->height = h->h = (8*h->flen + h->w-1) / ( i->width ); // should pad
     return h;
  oops:
@@ -78,7 +75,7 @@ bit1_init(FILE *fp, const fim_char_t *filename, unsigned int page,
 }
 
 static void
-bit1_read(fim_byte_t *dst, unsigned int line, void *data)
+bit1_read(unsigned char *dst, unsigned int line, void *data)
 {
     struct bit1_state *h = (struct bit1_state *) data;
     unsigned int ll,y,x = 0;
@@ -95,7 +92,7 @@ bit1_read(fim_byte_t *dst, unsigned int line, void *data)
 
 	for (x = 0; x < h->w; x+=8)
 	{
-		fim_byte_t c = fgetc(h->fp);
+		unsigned char c = fgetc(h->fp);
 		*(dst++) = (c & 1 << 0)?255:0;
 		*(dst++) = (c & 1 << 0)?255:0;
 		*(dst++) = (c & 1 << 0)?255:0;
@@ -121,7 +118,7 @@ bit1_read(fim_byte_t *dst, unsigned int line, void *data)
 		*(dst++) = (c & 1 << 7)?255:0;
 		*(dst++) = (c & 1 << 7)?255:0;
 	}
-//	if(y==h->h-1) fim_bzero(dst,h->w*8-8*x);
+//	if(y==h->h-1) bzero(dst,h->w*8-8*x);
 }
 
 static void
@@ -140,7 +137,7 @@ struct ida_loader bit1_loader = {
     /*magic:*/ "ELF",
     /*moff:*/  1,
     /*mlen:*/  3,
-    /*name:*/  "Bit1",
+    /*name:*/  "bmp",
     /*init:*/  bit1_init,
     /*read:*/  bit1_read,
     /*done:*/  bit1_done,
@@ -148,9 +145,9 @@ struct ida_loader bit1_loader = {
 
 static void __init init_rd(void)
 {
-    fim_load_register(&bit1_loader);
+    load_register(&bit1_loader);
 }
 
 
 }
-#endif /* FIM_WANT_RAW_BITS_RENDERING */
+

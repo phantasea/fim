@@ -1,8 +1,8 @@
-/* $LastChangedDate: 2014-11-17 19:22:17 +0100 (Mon, 17 Nov 2014) $ */
+/* $Id: FbiStuffPs.cpp 271 2009-12-13 00:03:48Z dezperado $ */
 /*
  FbiStuffPs.cpp : fim functions for decoding PS files
 
- (c) 2008-2014 Michele Martone
+ (c) 2008-2009 Michele Martone
  based on code (c) 1998-2006 Gerd Knorr <kraxel@bytesex.org>
 
     This program is free software; you can redistribute it and/or modify
@@ -43,14 +43,13 @@ extern "C"
 
 namespace fim
 {
-extern CommandConsole cc;
 
 /* ---------------------------------------------------------------------- */
 /* load                                                                   */
 
 struct ps_state_t {
 	int row_stride;    /* physical row width in output buffer */
-	fim_byte_t * first_row_dst;
+	unsigned char * first_row_dst;
 	int w,h;
 	SpectreDocument * sd;
 	SpectrePage * sp;
@@ -60,21 +59,20 @@ struct ps_state_t {
 
 
 /* ---------------------------------------------------------------------- */
-#define FIM_SPECTRE_DEFAULT_DPI 72
+
 static void*
-ps_init(FILE *fp, const fim_char_t *filename, unsigned int page,
+ps_init(FILE *fp, char *filename, unsigned int page,
 	  struct ida_image_info *i, int thumbnail)
 {
-	fim_int prd=cc.getIntVariable(FIM_VID_PREFERRED_RENDERING_DPI);
-	prd=prd<1?FIM_RENDERING_DPI:prd;
-	double scale = 1.0* (((double)prd)/((double)FIM_SPECTRE_DEFAULT_DPI)) ;
+	double scale = 1.5;
 	double rcscale = scale;
+
 	struct ps_state_t * ds=NULL;
 
 	if(filename==FIM_STDIN_IMAGE_NAME){std::cerr<<"sorry, stdin multipage file reading is not supported\n";return NULL;}	/* a drivers's problem */ 
 	if(fp) fclose(fp);
 
-	ds = (struct ps_state_t*)fim_calloc(1,sizeof(struct ps_state_t));
+	ds = (struct ps_state_t*)fim_calloc(sizeof(struct ps_state_t),1);
 
 	if(!ds)
 		return NULL;
@@ -99,7 +97,7 @@ ps_init(FILE *fp, const fim_char_t *filename, unsigned int page,
 	if(!ds->src)
 		goto err;
 
-	i->dpi    = FIM_SPECTRE_DEFAULT_DPI; /* FIXME */
+	i->dpi    = 1.0*72; /* FIXME */
 
 	spectre_render_context_set_scale(ds->src,scale,scale);
 	spectre_render_context_set_rotation(ds->src,0);
@@ -144,7 +142,7 @@ err:
 }
 
 static void
-ps_read(fim_byte_t *dst, unsigned int line, void *data)
+ps_read(unsigned char *dst, unsigned int line, void *data)
 {
     	struct ps_state_t *ds = (struct ps_state_t*)data;
 	if(!ds)return;
@@ -153,7 +151,7 @@ ps_read(fim_byte_t *dst, unsigned int line, void *data)
     		ds->first_row_dst = dst;
 	else return;
 
-	fim_byte_t       *page_data=NULL;
+	unsigned char       *page_data=NULL;
 
 	//render in RGB32 format
 	//spectre_page_render(ds->sp,ds->src,&page_data,&ds->row_stride);
@@ -167,15 +165,9 @@ ps_read(fim_byte_t *dst, unsigned int line, void *data)
 	for(i=0;i<ds->h;++i)
 		for(j=0;j<ds->w;++j)
 		{
-#if 0
 			dst[ds->w*i*3+3*j+0]=page_data[ds->row_stride*i+4*j+0];
 			dst[ds->w*i*3+3*j+1]=page_data[ds->row_stride*i+4*j+1];
 			dst[ds->w*i*3+3*j+2]=page_data[ds->row_stride*i+4*j+2];
-#else
-			dst[ds->w*i*3+3*j+2]=page_data[ds->row_stride*i+4*j+0];
-			dst[ds->w*i*3+3*j+1]=page_data[ds->row_stride*i+4*j+1];
-			dst[ds->w*i*3+3*j+0]=page_data[ds->row_stride*i+4*j+2];
-#endif
 		}
 	fim_free(page_data);
 }
@@ -208,7 +200,7 @@ static struct ida_loader ps_loader = {
 
 static void __init init_rd(void)
 {
-    fim_load_register(&ps_loader);
+    load_register(&ps_loader);
 }
 
 }

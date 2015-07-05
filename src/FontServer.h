@@ -1,8 +1,8 @@
-/* $LastChangedDate: 2013-11-01 16:18:12 +0100 (Fri, 01 Nov 2013) $ */
+/* $Id: FontServer.h 206 2009-02-13 00:52:29Z dezperado $ */
 /*
  FontServer.h : Font Server code from fbi, adapted for fim.
 
- (c) 2008-2013 Michele Martone
+ (c) 2008-2009 Michele Martone
  (c) 1998-2006 Gerd Knorr <kraxel@bytesex.org>
 
     This program is free software; you can redistribute it and/or modify
@@ -38,7 +38,7 @@ namespace fim
 {
 
 
-#ifdef FIM_USE_X11_FONTS
+#ifndef X_DISPLAY_MISSING
 # include <FSlib.h>
 
 struct fs_font {
@@ -46,18 +46,18 @@ struct fs_font {
     FSXFontInfoHeader  fontHeader;
     FSPropInfo         propInfo;
     FSPropOffset       *propOffsets;
-    fim_byte_t      *propData;
+    unsigned char      *propData;
 
     FSXCharInfo        *extents;
     FSOffset           *offsets;
-    fim_byte_t      *glyphs;
+    unsigned char      *glyphs;
 
     int                maxenc,width,height;
     FSXCharInfo        **eindex;
-    fim_byte_t      **gindex;
+    unsigned char      **gindex;
 };
 
-#else /* FIM_USE_X11_FONTS */
+#else
 
 typedef struct _FSXCharInfo {
     short       left;
@@ -82,15 +82,15 @@ typedef struct _FSXFontInfoHeader {
 
 struct fs_font {
     FSXFontInfoHeader  fontHeader;
-    /*fim_byte_t      *propData;*/
+    /*unsigned char      *propData;*/
     FSXCharInfo        *extents;
-    fim_byte_t      *glyphs;
+    unsigned char      *glyphs;
     int                maxenc,width,height;
     FSXCharInfo        **eindex;
-    fim_byte_t      **gindex;
+    unsigned char      **gindex;
 };
 
-#endif  /* FIM_USE_X11_FONTS */
+#endif
 
 
 
@@ -103,7 +103,6 @@ static const unsigned fs_masktab[] = {
 
 
 
-fim::string get_default_font_list(void);
 
 class FontServer
 {
@@ -114,17 +113,16 @@ public:
 
 #if 1
 /* 20080507 unused, as default_font ? */
-static void fb_text_init1(const fim_char_t *font, struct fs_font **_f);
+static void fb_text_init1(const char *font, struct fs_font **_f);
 
-static struct fs_font* fs_consolefont(const fim_char_t **filename);
+static struct fs_font* fs_consolefont(const char **filename);
 #endif
 
 
 
 };
-void fim_free_fs_font(struct fs_font *f_); /* FIXME: temporarily here */
 
 }
 
-#endif /* FIM_FONT_SERVER_H */
+#endif
 

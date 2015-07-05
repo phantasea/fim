@@ -1,8 +1,8 @@
-/* $LastChangedDate: 2015-02-11 17:51:25 +0100 (Wed, 11 Feb 2015) $ */
+/* $Id: string.cpp 245 2009-04-28 21:28:38Z dezperado $ */
 /*
  string.cpp : A reimplementation of string class
 
- (c) 2007-2015 Michele Martone
+ (c) 2007-2009 Michele Martone
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -20,8 +20,6 @@
 */
 #include "fim.h"
 
-#define FIM_WANT_DEBUG_REGEXP 0
-
 namespace fim
 {
 #ifndef _FIM_STRING_WRAPPER
@@ -31,7 +29,7 @@ namespace fim
 	 *	without breaking the rest of the program.
 	 */
 
-	void string::_string_init(void)
+	void string::_string_init()
 	{	
 		/* the string is initialized as unallocated and blank */
 #ifdef _FIM_DYNAMIC_STRING
@@ -39,7 +37,7 @@ namespace fim
 		len=0;
 #else
 		*s='\0';
-#endif /* _FIM_DYNAMIC_STRING */
+#endif
 	}
 
 	std::ostream& operator<<(std::ostream &os,const string& s)
@@ -61,7 +59,7 @@ namespace fim
 		return b.print(os);
 	}
 
-	string::string(void)
+	string::string()
 	{
 		_string_init();
 		/* no allocation is necessary for an empty string */
@@ -73,13 +71,13 @@ namespace fim
 		this->assign(s.c_str());
 	}
 
-	string::string(const fim_char_t *str)
+	string::string(const char *str)
 	{
 		_string_init();
 		this->assign(str);
 	}
 
-	string::~string(void)
+	string::~string()
 	{
 #ifdef _FIM_DYNAMIC_STRING
 		if(s && len==0){std::cout <<"anomalia\n";exit(-1);}
@@ -88,38 +86,27 @@ namespace fim
 		{
 			fim_free(s);
 		}
-#else /* _FIM_DYNAMIC_STRING */
-#endif /* _FIM_DYNAMIC_STRING */
+#else
+#endif
 	}
 
 	string::string(const int i)
 	{
 		_string_init();
-		fim_char_t buf[FIM_CHARS_FOR_INT];
+		char buf[FIM_CHARS_FOR_INT];
 		sprintf(buf,"%d",i);
-		assign(buf);
-	}
-
-	string::string(const fim_int i)
-	{
-		_string_init();
-		fim_char_t buf[FIM_CHARS_FOR_INT];
-		if(sizeof(fim_int)==sizeof(int))
-			sprintf(buf,"%d",(int)i);
-		else
-			sprintf(buf,"%lld",(long long int)i);
 		assign(buf);
 	}
 
 	string::string(const unsigned int i)
 	{
 		_string_init();
-		fim_char_t buf[FIM_CHARS_FOR_INT];
+		char buf[FIM_CHARS_FOR_INT];
 		sprintf(buf,"%u",i);
 		assign(buf);
 	}
 
-	const fim_char_t*string::c_str(void)const
+	const char*string::c_str()const
 	{
 		if(  this->isempty() == true ) return "";
 		return s;	/* yes, a heap allocated reference */
@@ -133,7 +120,7 @@ namespace fim
 		return ((*this) == s.c_str());
 	}
 
-	bool string::operator==(const fim_char_t *  s)const
+	bool string::operator==(const char *  s)const
 	{
 		/* both empty ? */
 		if(fim_empty_string(s) && this->isempty())return true;
@@ -167,7 +154,7 @@ namespace fim
 		return ((*this)>s.c_str());
 	}
 
-	bool string::operator >(const fim_char_t *s)const
+	bool string::operator >(const char *s)const
 	{
 		if(this->isempty())return false;
 		if(!s || !*s)return true;
@@ -175,7 +162,7 @@ namespace fim
 		return (strcmp(this->s,s) >0);
 	}
 
-	bool string::operator <(const fim_char_t *s)const
+	bool string::operator <(const char *s)const
 	{
 		if(this->isempty())
 		{
@@ -205,17 +192,17 @@ namespace fim
 #ifdef _FIM_DYNAMIC_STRING
 		++l;
 		if(l<size())return size();
-		fim_char_t *ns;/* new string */
-		ns=(fim_char_t*)realloc((void*)s,l);/* the terminator is our stuff */
+		char *ns;/* new string */
+		ns=(char*)realloc((void*)s,l);/* the terminator is our stuff */
 		if(ns)
 		{
 			s=ns;
-			if(l>len)fim_bzero(s+len,l-len);
+			if(l>len)memset(s+len,0,l-len);
 			len=l;
 		}
 		//if realloc fails, we keep the old one
-#else /* _FIM_DYNAMIC_STRING */
-#endif /* _FIM_DYNAMIC_STRING */
+#else
+#endif
 		return this->size();
 	}
 
@@ -245,21 +232,21 @@ namespace fim
 	}
 
 	/* reports the effective used space */
-	int  string::length(void)const
+	int  string::length()const
 	{
 		if(isempty())return 0;
 		return strlen(s);
 	}
 
 	/* reports the effective allocated space */
-	int  string::size(void)const
+	int  string::size()const
 	{
 #ifdef _FIM_DYNAMIC_STRING
 		if(!s)return 0;
 		return len;
-#else /* _FIM_DYNAMIC_STRING */
+#else
 		return sizeof(s);
-#endif /* _FIM_DYNAMIC_STRING */
+#endif
 	}
 
 	int  string::find(const string&str)const
@@ -278,7 +265,7 @@ namespace fim
 	/*
 	 * returns the new length
 	 * */
-	int  string::assign(const fim_char_t *s)
+	int  string::assign(const char *s)
 	{
 		int l,r;
 		if(!s || !*s)	// length is zero in these cases
@@ -305,13 +292,13 @@ namespace fim
 	/*
 	 * empty or null string is always found
 	 * */
-	int  string::find(const fim_char_t*ss)const
+	int  string::find(const char*ss)const
 	{
 		if( this->isempty() && !ss      )return 0;
 		if( this->isempty() && *ss!='\0')return -1;
 		if(!this->isempty() && *ss=='\0')return 0;
 
-		const fim_char_t*p=strstr(s,ss);if(!p)return -1;return p-s;
+		const char*p=strstr(s,ss);if(!p)return -1;return p-s;
 	}
  	
 	std::ostream& string::print(std::ostream &os)const
@@ -320,20 +307,16 @@ namespace fim
 		return os<<this->s;
 	}
 
-	operator string::int()const{return atoi(s);}
-	operator string::fim_int()const{return fim_atoi(s);}
-	operator string::float()const{return fim_atof(s);}
-
 	/*
 	 * a string is empty if NULL or allocated to zero bytes (if possible)
 	 * */
-	bool string::isempty(void)const
+	bool string::isempty()const
 	{
 #ifdef _FIM_DYNAMIC_STRING
 		return (s==NULL || len==0 || *s=='\0');
-#else /* _FIM_DYNAMIC_STRING */
+#else
 		return *s=='\0';
-#endif /* _FIM_DYNAMIC_STRING */
+#endif
 	}
 
 	/* 
@@ -353,18 +336,19 @@ namespace fim
 		//do we need some allocation? only if l was already > 0
 		if(l+1<len && s)
 		{
-			fim_bzero(s,l+1);
+			memset(s,0,l+1);
 		}else
 		if(l++>0)
 		{
 
 #if 1
 			// this is a sort of buffering
+//			#define BUFSIZE 64
 			#define BUFSIZE TOKSIZE
 			l=(l<BUFSIZE?BUFSIZE:l);
-#endif /* _FIM_DYNAMIC_STRING */
+#endif
 
-			s=(fim_char_t*)(fim_calloc(l));
+			s=(char*)(fim_calloc(l));
 
 			len=(s?l:0);	/* who knows .. */
 		}
@@ -372,12 +356,12 @@ namespace fim
 		{
 			/* we keep the string blanked  and we are happy */
 		}
-#else /* _FIM_DYNAMIC_STRING */
+#else
 		*s='\0';
-#endif /* _FIM_DYNAMIC_STRING */
+#endif
 		return (this->size());
 	}
-#else /* _FIM_STRING_WRAPPER */
+#else
 	std::ostream& operator<<(std::ostream &os,const string& s)
 	{
 		return os << s.c_str();
@@ -402,58 +386,28 @@ namespace fim
 	{
 	}
 
-	string::string(fim_char_t c)
-	{
-		fim_char_t buf[2];
-		buf[0]=c;
-		buf[1]='\0';
-		append(buf);
-	}
-
-#if FIM_WANT_LONG_INT
 	string::string(int i)
 	{
-		fim_char_t buf[FIM_CHARS_FOR_INT];
+		char buf[FIM_CHARS_FOR_INT];
 		snprintf(buf,FIM_CHARS_FOR_INT-1,"%d",i);
-		buf[FIM_CHARS_FOR_INT-1]='\0';
-		append(buf);
-	}
-#endif /* FIM_WANT_LONG_INT */
-
-	string::string(fim_int i)
-	{
-		fim_char_t buf[FIM_CHARS_FOR_INT];
-		if(sizeof(fim_int)==sizeof(int))
-			snprintf(buf,FIM_CHARS_FOR_INT-1,"%d",(int)i);
-		else
-			snprintf(buf,FIM_CHARS_FOR_INT-1,"%lld",(long long int)i);
-		buf[FIM_CHARS_FOR_INT-1]='\0';
-		append(buf);
-	}
-
-	string::string(size_t i)
-	{
-		fim_char_t buf[FIM_CHARS_FOR_INT];
-		snprintf(buf,FIM_CHARS_FOR_INT-1,"%zd",i);
 		buf[FIM_CHARS_FOR_INT-1]='\0';
 		append(buf);
 	}
 
 	string::string(int * i)
 	{
-		fim_char_t buf[FIM_CHARS_FOR_INT];
-		snprintf(buf,FIM_CHARS_FOR_INT-1,"%p",(void*)i);
+		char buf[FIM_CHARS_FOR_INT];
+		snprintf(buf,FIM_CHARS_FOR_INT-1,"%p",i);
 		buf[FIM_CHARS_FOR_INT-1]='\0';
 		append(buf);
 	}
 	
-	string::string(float i)
-	{
-		fim_char_t buf[FIM_ATOX_BUFSIZE];
-		sprintf(buf,"%f",i);
-		assign(buf);
-	}
-
+	/*
+	 * see the next commented declaration ? it is pure evil, do not use it !
+	 *
+	#define	FIM_STRING_INITIAL_LENGTH 64
+	string::string():std::string(FIM_STRING_INITIAL_LENGTH,'\0'){}
+	*/
 	string::string():std::string(""){}
 
 	string string::operator+(const string s)const
@@ -463,7 +417,7 @@ namespace fim
 		return string(res);
 	}
 
-	bool string::re_match(const fim_char_t*r)const
+	bool string::re_match(const char*r)const
 	{
 		/*
 		 * each occurrence of regular expression r will be substituted with t
@@ -489,13 +443,7 @@ namespace fim
 		return false;
 	}
 
-#if FIM_WANT_LONG_INT
- 	string::operator int  (void)const{return atoi(this->c_str());}
-#endif /* FIM_WANT_LONG_INT */
- 	string::operator fim_int  (void)const{return fim_atoi(this->c_str());}
-	string::operator float(void)const{return fim_atof(this->c_str());}
-
-	int string::find_re(const fim_char_t*r, int *mbuf)const
+	int string::find_re(const char*r, int *mbuf)const
 	{
 		/*
 		 * each occurrence of regular expression r will be substituted with t
@@ -527,20 +475,16 @@ namespace fim
 		return -1;
 	}
 
-	void string::substitute(const fim_char_t*r, const fim_char_t* s, int flags)
+	void string::substitute(const char*r, const char* s, int flags)
 	{
 		/*
-		 * each occurrence of regular expression r will be substituted with s
+		 * each occurrence of regular expression r will be substituted with t
 		 *
 		 * FIXME : return values could be more informative
-		 * FIXME : not efficient
 		 * */
 		regex_t regex;
 		const int nmatch=1;
 		regmatch_t pmatch[nmatch];
-		int off=0,sl=0;
-		std::string rs =FIM_CNS_EMPTY_STRING;
-		int ts=this->size();
 
 		if( !r || !*r || !s )
 			return;
@@ -548,39 +492,29 @@ namespace fim
 		if( regcomp(&regex,r, 0 | REG_EXTENDED | REG_ICASE | flags ) != 0 )
 			return;
 
-		sl=strlen(s);
+		int off=0;
 		//const int s_len=strlen(s);
-		while(regexec(&regex,off+c_str(),nmatch,pmatch,REG_NOTBOL)==0)
+		while(regexec(&regex,off+c_str(),nmatch,pmatch,0)==0)
 		{
 			/*
 			 * please note that this is not an efficient subsitution implementation.
 			 * */
-			if(FIM_WANT_DEBUG_REGEXP)std::cerr << "pasting "<<off<< ":"<<off+pmatch->rm_so<<"\n";
-			if(pmatch->rm_so>0)
-			rs+=substr(off,off+pmatch->rm_so-1);
-			if(FIM_WANT_DEBUG_REGEXP)std::cerr << "forward to "<<rs<<"\n";
-			rs+=s;
-			//rs+=substr(pmatch->rm_eo,ts);
-			if(FIM_WANT_DEBUG_REGEXP)std::cerr << "match at "<<c_str() << " from " << off+pmatch->rm_so << " to " << off+pmatch->rm_eo<< ", off="<<off<<"\n";
-			off+=pmatch->rm_eo;
-			if(FIM_WANT_DEBUG_REGEXP)std::cerr << "forward to "<<rs<<"\n";
+			std::string ss = substr(0,pmatch->rm_so);
+			ss+=s;
+			ss+=substr(pmatch->rm_eo,this->size());
+			*this=ss.c_str();
+
 		}
-		if(FIM_WANT_DEBUG_REGEXP)std::cerr << "forward no more\n";
-		if(ts>off)
-			rs+=substr(off,ts);
-		if(FIM_WANT_DEBUG_REGEXP)std::cerr << "res is "<<rs<<", off= "<<off<<"\n";
-		if(rs!=*this)
-			*this=rs.c_str();
 		regfree(&regex);
 		return;
 	}
 
-	size_t string::lines(void)const
+	size_t string::lines()const
 	{
 		/*
 		 * each empty line will be counted unless it is the last and not only.
 		 * */
-		const fim_char_t*s=c_str(),*f=s;
+		const char*s=c_str(),*f=s;
 		size_t c=0;
 		if(!s)return 0;
 		while((s=strchr(s,'\n'))!=NULL){++c;f=++s;}
@@ -592,7 +526,7 @@ namespace fim
 		/*
 		 * returns the ln'th line of the string, if found, or ""
 		 * */
-		const fim_char_t*s,*f;
+		const char*s,*f;
 		s=this->c_str();
 		f=s;
 		if(ln< 0 || !s)return "";
@@ -603,7 +537,7 @@ namespace fim
 		}
 		if(!ln)
 		{
-			const fim_char_t *se=s;
+			const char *se=s;
 			if(!*s)se=s+strlen(s);
 			else se=strchr(s,'\n');
 			fim::string rs;
@@ -612,6 +546,6 @@ namespace fim
 		}
 		return "";
 	}
-#endif /* _FIM_STRING_WRAPPER */
+#endif
 }
 

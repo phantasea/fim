@@ -1,24 +1,26 @@
-# $Id: Makefile.am 742 2015-01-25 18:06:45Z dezperado $
+# This file should be processed with automake..
+#
+# $Id: Makefile.am 265 2009-10-14 21:05:40Z dezperado $
+#
+# inspired by mutt's  Makefile.am 
+#
+# yet not optimal
 
 # no-dependencies was due to problems with conditional sources
 # nostdinc disables the standard -I. include which breaks a correct string.h include
 AUTOMAKE_OPTIONS = nostdinc no-dependencies # dejagnu
 SUBDIRS = src doc distros scripts
 
-dist_doc_DATA=$(top_srcdir)/README $(top_srcdir)/README.FIRST $(top_srcdir)/TODO $(top_srcdir)/VERSION $(top_srcdir)/BUGS  $(top_srcdir)/FAQ.TXT $(top_srcdir)/AUTHORS $(top_srcdir)/ChangeLog $(top_srcdir)/NEWS
+dist_doc_DATA=README README.FIRST TODO VERSION BUGS  FAQ.TXT AUTHORS ChangeLog NEWS
 # no INSTALL INSTALL.TXT is necessary in rules
 EXTRA_DIST=  COPYING  \
 	Makefile.am configure.ac configure \
 	 aclocal.m4 config.h.in \
 	autogen.sh \
-	$(top_srcdir)/media/image.jpg \
-	$(top_srcdir)/media/image.png \
-	$(top_srcdir)/media/fim.png \
-	$(top_srcdir)/var/fonts/Lat15-Terminus16.psf \
+	media/image.jpg \
+	media/image.png \
+	media/fim.png \
 	depcomp missing install-sh
-FIM_EXE=./src/fim
-FIMGS_EXE=./src/fimgs
-
 
 # mhmhmhm 
 # CLEANFILES = autom4te.cache
@@ -42,40 +44,32 @@ signed-dist: dist
 #	        gpg -sbav -u EF1258B8 $@ $<
 
 
-FIMNORCOPTS=-N --no-etc-rc-file
-
 # this rule is deprecated, too: testing should be performed with 'make tests' (FIXME)
 sanity-check:	all
-	@$(FIM_EXE) $(FIMNORCOPTS) -E $(top_srcdir)/scripts/tests/sanity.fim -t
+	@./src/fim -E scripts/tests/sanity.fim -t
 
 # this is the official way of testing fim
 tests:	all
-	ulimit -c unlimited
-	ulimit -v 32000
-	ulimit -t 1000
-	@top_srcdir=$(top_srcdir) $(SHELL) $(top_srcdir)/scripts/tests/version.sh
-	@top_srcdir=$(top_srcdir) $(SHELL) $(top_srcdir)/scripts/tests/font.sh
-	@$(FIM_EXE) $(FIMNORCOPTS) -o dumb -E $(top_srcdir)/scripts/example/oneline.fim -c quit 
-	@$(FIM_EXE) $(FIMNORCOPTS) -o dumb -c 'quit 14' ; if test $$? == 14 ; then echo '[*] Error code return test PASSED' ; else echo 'Error code return test FAILED'; false ; fi
-	if test $(abs_builddir) = $(abs_srcdir) ; then make -C src/testdir ; fi
+	@./scripts/tests/version.sh
+	@cd ./src/testdir && make
 
 FIMSCRIPTSDIR=`pwd`/scripts/maintenance/
 
 # new target, still not working
 tests-all: tests $(FIMSCRIPTSDIR)/configure-brute-check.sh
 	cd src && which cppcheck && cppcheck *cpp *.h || true
-	$(SHELL) $(FIMSCRIPTSDIR)/configure-brute-check.sh
+	$(FIMSCRIPTSDIR)/configure-brute-check.sh
 	
 #news-dump:
-#	$(AWK)  -- 'v=0;($$1 == "Version" && $$2=="'`cat VERSION`'"){while((input=getline) && $$1!="Version"){print}};'  NEWS > f
+#	awk  -- 'v=0;($$1 == "Version" && $$2=="'`cat VERSION`'"){while((input=getline) && $$1!="Version"){print}};'  NEWS > f
 
 # this rule is deprecated, too
 test:	all
-	@$(FIM_EXE) $(FIMNORCOPTS) $(top_srcdir)/media/* #~/M*s/*g
+	@./src/fim -N media/* #~/M*s/*g
 
 # this rule is deprecated, too
 aatest:	all
-	@$(FIM_EXE) $(FIMNORCOPTS) $(top_srcdir)/media/* -o aa #~/M*s/*g
+	@./src/fim -N media/* -o aa #~/M*s/*g
 
 # this rule is old and deprecated
 #tgz:	clean
@@ -128,21 +122,9 @@ help:
 	@echo
 	@echo
 
-ai:
-	make site up -C var/
-
 up: upload news
 
 news: freshmeat mail-announce
-
-dox: doc/fim.man doc/fimrc.man doc/fimgs.man
-
-MANSUBST = sed -e 's,@sysconfdir\@,$(sysconfdir),g' -e 's,@docdir\@,$(docdir),g' -e 's,-,\\-,g'
-
-doc/fim.man doc/fimrc.man doc/fimgs.man: $(FIM_EXE)
-	$(FIM_EXE) $(FIMNORCOPTS) --help=m                   |$(MANSUBST) > doc/fim.man
-	$(FIM_EXE) $(FIMNORCOPTS) --dump-reference-help=man  |$(MANSUBST) > doc/fimrc.man
-	$(FIMGS_EXE) -m -- $(FIMNORCOPTS)                    |$(MANSUBST) > doc/fimgs.man
 
 # fixme : missing integration with ChangeLog file
 mail-announce:
@@ -167,7 +149,7 @@ savannah-lookup:
 
 # fixme : missing integration with ChangeLog file and such information
 freshmeat_old: 
-	@ $(AWK)  -- 'v=0;($$1 == "Version" && $$2=="'`cat VERSION`'"){while((input=getline) && $$1!="Version"){print}};'  NEWS 
+	@ awk  -- 'v=0;($$1 == "Version" && $$2=="'`cat VERSION`'"){while((input=getline) && $$1!="Version"){print}};'  NEWS 
 	@echo freshmeat-submit -v "fbi-`cat VERSION`" \
 	--project fbi-improved \
 	--license GPL \
@@ -178,7 +160,7 @@ freshmeat_old:
 	--mirror-site-url       $$(cat README | grep "^Off.*rror : "|sed s/^.*\ :.//g) \
 	--changelog-url         $$(cat README | grep "^ChangeLog  "|sed s/^.*\ :.//g)
 	@ echo "are you sure ? (any key to abort, yes to continue)"  && read yes && [[ "$${yes}" == "yes" ]] && \
-	$(AWK)  -- 'v=0;($$1 == "Version" && $$2=="'`cat VERSION`'"){while((input=getline) && $$1!="Version"){print}};'  NEWS | \
+	awk  -- 'v=0;($$1 == "Version" && $$2=="'`cat VERSION`'"){while((input=getline) && $$1!="Version"){print}};'  NEWS | \
 	 freshmeat-submit -v "fbi-`cat VERSION`" \
 	--project fbi-improved \
 	--license GPL \
@@ -205,7 +187,7 @@ freshmeat-submit:
 	@echo ChangeLog-URL: $$(cat README | grep "^ChangeLog  "|sed s/^.*\ :.//g)
 	@echo CVS-URL: $$(cat README | grep "^Repository"|sed s/^.*\ :.//g)
 	@echo 
-	@ $(AWK)  -- 'v=0;($$1 == "Version" && $$2=="'`cat VERSION`'"){while((input=getline) && $$1!="Version"){print}};'  NEWS 
+	@ awk  -- 'v=0;($$1 == "Version" && $$2=="'`cat VERSION`'"){while((input=getline) && $$1!="Version"){print}};'  NEWS 
 
 freshmeat:
 	@ echo "are you sure you want to freshmeat-submit ? (any key to abort, yes to continue)"  && read yes && [[ "$${yes}" == "yes" ]] && \
