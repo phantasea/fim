@@ -138,6 +138,17 @@ namespace fim
 		assert(cp);
 		if(filename=="")
 		{
+            //Add by chris
+            if (unlink(current().c_str()) < 0)
+            {
+                commandConsole.set_status_bar("Unlink file failed", "DELETE");
+                return "";
+            }
+
+			commandConsole.set_status_bar("Unlink file successfully", "DELETE");
+            return "";
+            //Add by chris
+
 			if(current_n()==(int)flist.size())cp--;
 			s=flist[flist.size()-1];
 			flist.erase(flist.begin()+current_n());
