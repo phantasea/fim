@@ -145,7 +145,7 @@ namespace fim
                 return "";
             }
 
-			commandConsole.set_status_bar("Unlink file successfully", "DELETE");
+            commandConsole.set_status_bar("Unlink file successfully", "DELETE");
             return "";
             //Add by chris
 
