@@ -201,7 +201,7 @@
 		key_bindings["PageDown"]=2117491483;
 		key_bindings["PageUp"]=2117425947;
 		key_bindings["Enter"]=10;
-		key_bindings["Space"]=32;
+		key_bindings["Space"]=32;  //add by chris
 		key_bindings["Backspace"]=127;
 		key_bindings["Del"]=2117294875;
 		key_bindings["Ins"]=2117229339;
