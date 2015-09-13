@@ -268,6 +268,8 @@ void initialize_readline (int with_no_display_device)
 	//rl_bind_keyseq("g",fim_rl_end);
 	//rl_set_prompt("$");
 
+ 	rl_bind_key(0x1B, rl_newline);  //add by chris for ESC
+
 /*	rl_voidfunc_t *rl_redisplay_function=redisplay;
 	rl_hook_func_t *rl_event_hook=redisplay_hook;
 	rl_hook_func_t *rl_pre_input_hook=redisplay_hook;*/
