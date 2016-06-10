@@ -537,8 +537,14 @@ namespace fim
 			autocmd_exec("PostDisplay",c);
 #endif
 		}
-		else{ cout << "no image to display, sorry!";
-		commandConsole.set_status_bar("no image loaded.", "*");}
+		else{
+            cout << "no image to display, sorry!";
+            commandConsole.set_status_bar("no image loaded.", "*");
+            //add by chris *****
+            sleep(1);
+            std::exit(0);
+            //add by chris *****
+        }
 		return "";
 	}
 
