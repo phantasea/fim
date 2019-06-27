@@ -57,7 +57,7 @@ gif_fileread(struct gif_state *h)
 	if (GIF_ERROR == DGifGetRecordType(h->gif,&RecordType)) {
 	    if (FbiStuff::fim_filereading_debug())
 		FIM_FBI_PRINTF("gif: DGifGetRecordType failed\n");
-	    PrintGifError();
+	    PrintGifError();  //add by sim1: comment this line if compiling error
 	    return (GifRecordType)-1;
 	}
 	switch (RecordType) {
@@ -74,7 +74,7 @@ gif_fileread(struct gif_state *h)
 		if (rc == GIF_ERROR) {
 		    if (FbiStuff::fim_filereading_debug())
 			FIM_FBI_PRINTF("gif: DGifGetExtension failed\n");
-		    PrintGifError();
+		    PrintGifError();  //add by sim1: comment this line if compiling error
 		    return (GifRecordType)-1;
 		}
 		if (FbiStuff::fim_filereading_debug()) {
@@ -125,6 +125,7 @@ gif_init(FILE *fp, char *filename, unsigned int page,
     struct gif_state *h;
     GifRecordType RecordType;
     int i, image = 0;
+    //int *perror = NULL;  //add by sim1: add this line if compiling error
     
     h = (gif_state*)fim_calloc(sizeof(*h),1);
     if(!h)goto oops;
@@ -132,6 +133,7 @@ gif_init(FILE *fp, char *filename, unsigned int page,
 
     h->infile = fp;
     h->gif = DGifOpenFileHandle(fileno(fp));
+    //h->gif = DGifOpenFileHandle(fileno(fp), perror);  //add by sim1: use this line if compiling error
     h->row = (GifPixelType*)fim_malloc(h->gif->SWidth * sizeof(GifPixelType));
     if(!h->row)goto oops;
 
@@ -142,7 +144,7 @@ gif_init(FILE *fp, char *filename, unsigned int page,
 	    if (GIF_ERROR == DGifGetImageDesc(h->gif)) {
 		if (FbiStuff::fim_filereading_debug())
 		    FIM_FBI_PRINTF("gif: DGifGetImageDesc failed\n");
-		PrintGifError();
+		PrintGifError();  //add by sim1: comment this line if compiling error
 	    }
 	    if (NULL == h->gif->SColorMap &&
 		NULL == h->gif->Image.ColorMap) {
@@ -194,6 +196,7 @@ gif_init(FILE *fp, char *filename, unsigned int page,
     if (FbiStuff::fim_filereading_debug())
 	FIM_FBI_PRINTF("gif: fatal error, aborting\n");
     DGifCloseFile(h->gif);
+    //DGifCloseFile(h->gif, perror);  //add by sim1: use this line if compiling error
     fclose(h->infile);
     if(h && h->il )fim_free(h->il );
     if(h && h->row)fim_free(h->row);
@@ -230,11 +233,13 @@ gif_read(unsigned char *dst, unsigned int line, void *data)
 static void
 gif_done(void *data)
 {
+    //int *perror = NULL;  //add by sim1: add this line if compiling error
     struct gif_state *h = (struct gif_state *) data;
 
     if (FbiStuff::fim_filereading_debug())
 	FIM_FBI_PRINTF("gif: done, cleaning up\n");
     DGifCloseFile(h->gif);
+    //DGifCloseFile(h->gif, perror);  //add by sim1: use this line if compiling error
     fclose(h->infile);
     if (h->il)
 	fim_free(h->il);
